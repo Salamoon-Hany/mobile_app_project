@@ -77,7 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<Service> get _filteredServices {
     List<Service> allServices = _showMore 
-        ? [...services.where((s) => s.name != 'More'), ...moreServices]
+        ? [...services.where((s) => s.name != 'More'), ...moreServices, Service(name: 'Less', imagePath: null)]
         : services;
     
     if (_searchQuery.isEmpty) {
@@ -266,7 +266,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildServiceCard(Service service) {
     return GestureDetector(
       onTap: () {
-        if (service.name == 'More') {
+        if (service.name == 'More' || service.name == 'Less') {
           setState(() {
             _showMore = !_showMore;
           });
@@ -297,7 +297,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   )
                 : Icon(
-                    Icons.more_horiz,
+                    service.name == 'More' ? Icons.more_horiz : Icons.expand_less,
                     size: 40,
                     color: Colors.grey[700],
                   ),
