@@ -20,8 +20,6 @@ class _MyAppState extends State<MyApp> {
     _isDarkMode = !_isDarkMode;
   }
 
-  static bool get isDarkMode => _isDarkMode;
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
