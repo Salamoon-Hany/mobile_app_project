@@ -360,7 +360,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'Pics & Icons/Bell.png',
+                    'Pics & Icons/Notification.png',
                     width: 200,
                     height: 200,
                   ),
