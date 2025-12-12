@@ -649,7 +649,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       // Force rebuild of MyApp
                       (context.findAncestorStateOfType<_MyAppState>())?.setState(() {});
                     },
-                    activeColor: Color(0xFFd7ff00),
+                    activeThumbColor: Color(0xFFd7ff00),
                   ),
                 ],
               ),
