@@ -69,7 +69,7 @@ class WelcomeScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const MyHomePage()),
+                      MaterialPageRoute(builder: (context) => const PhoneVerificationScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
