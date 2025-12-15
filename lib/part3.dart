@@ -780,7 +780,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFd7ff00),
+                      color: Color(0xFF9FB700),
                     ),
                   ),
                 ],

@@ -85,23 +85,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error taking photo: $e'), duration: const Duration(seconds: 3)),
-        );
+        // Check if it's a camera not available error
+        if (e.toString().contains('camera') || e.toString().contains('not available')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No camera detected'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error taking photo: $e'), duration: const Duration(seconds: 3)),
+          );
+        }
       }
     }
   }
 
   void _showPhotoOptions() {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Camera and gallery features are only available on mobile devices'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -112,32 +113,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_profileImagePath != null)
-                ListTile(
-                  leading: const Icon(Icons.remove_red_eye_outlined),
-                  title: const Text('View current photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    showDialog(
-                      context: context,
-                      builder: (context) => Dialog(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.file(File(_profileImagePath!)),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
-                        ),
+              ListTile(
+                leading: const Icon(Icons.remove_red_eye_outlined),
+                title: const Text('View Picture'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => Dialog(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_profileImagePath != null && !kIsWeb)
+                            Image.file(File(_profileImagePath!), height: 300)
+                          else
+                            Image.asset('Pics & Icons/Pic_Icon.png', height: 300),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Upload from gallery'),
+                title: const Text('Upload a Picture'),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromGallery();
@@ -145,10 +149,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Take a photo'),
+                title: const Text('Take a Picture'),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImageFromCamera();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No camera detected'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
                 },
               ),
             ],
@@ -238,44 +247,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Center(
-                child: GestureDetector(
-                  onTap: _showPhotoOptions,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _profileImagePath != null && !kIsWeb
-                            ? FileImage(File(_profileImagePath!))
-                            : null,
-                        child: _profileImagePath == null || kIsWeb
-                            ? Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.grey[600],
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFd7ff00),
-                            shape: BoxShape.circle,
+              Column(
+                children: [
+                  Center(
+                    child: GestureDetector(
+                      onTap: _showPhotoOptions,
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: _profileImagePath != null && !kIsWeb
+                                ? FileImage(File(_profileImagePath!))
+                                : const AssetImage('Pics & Icons/Pic_Icon.png') as ImageProvider,
                           ),
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 16,
-                            color: Colors.black,
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFd7ff00),
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Colors.black,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: 32),
               
