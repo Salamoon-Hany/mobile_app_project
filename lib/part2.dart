@@ -11,7 +11,7 @@ class PhoneVerificationScreen extends StatefulWidget {
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   final TextEditingController _phoneController = TextEditingController();
-  String _countryCode = '+20';
+  final String _countryCode = '+20';
 
   @override
   void dispose() {
@@ -129,12 +129,23 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                       );
                       return;
                     }
-                    // Navigate to OTP screen
+                    if (_phoneController.text.length != 10) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Phone number must be 10 digits')),
+                      );
+                      return;
+                    }
+                    // Generate random 6-digit OTP
+                    final random = Random();
+                    final otp = (100000 + random.nextInt(900000)).toString();
+                    
+                    // Navigate to OTP screen with generated OTP
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => OTPVerificationScreen(
                           phoneNumber: _countryCode + _phoneController.text,
+                          correctOTP: otp,
                         ),
                       ),
                     );
@@ -166,7 +177,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
-  const OTPVerificationScreen({super.key, required this.phoneNumber});
+  final String correctOTP;
+  const OTPVerificationScreen({
+    super.key,
+    required this.phoneNumber,
+    required this.correctOTP,
+  });
 
   @override
   State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
@@ -175,6 +191,13 @@ class OTPVerificationScreen extends StatefulWidget {
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final TextEditingController _otpController = TextEditingController();
   int _resendCountdown = 0;
+  late String _currentOTP;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentOTP = widget.correctOTP;
+  }
 
   @override
   void dispose() {
@@ -215,6 +238,26 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
+              // TEST BANNER: Show OTP for development/testing
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange, width: 1),
+                ),
+                child: Text(
+                  'Test OTP: $_currentOTP',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange[800],
+                  ),
+                ),
+              ),
               const SizedBox(height: 40),
               // Verification icon in yellow circle
               Container(
@@ -295,17 +338,24 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       );
                       return;
                     }
-                    // Mock OTP verification (in real app, validate with backend)
-                    if (_otpController.text == '270692' || _otpController.text.length == 6) {
+                    // Validate against the current OTP
+                    if (_otpController.text == _currentOTP) {
+                      // Save phone number to global state
+                      _MyAppState.setPhoneNumber(widget.phoneNumber);
+                      
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Phone verified successfully!')),
                       );
-                      // Navigate to Home after verification
+                      // Navigate to Profile after verification
                       Future.delayed(const Duration(milliseconds: 500), () {
                         if (mounted) {
                           Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(builder: (context) => const MyHomePage()),
+                            MaterialPageRoute(
+                              builder: (context) => ProfileScreen(
+                                phoneNumber: _MyAppState.getPhoneNumber(),
+                              ),
+                            ),
                           );
                         }
                       });
@@ -336,10 +386,16 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               GestureDetector(
                 onTap: _resendCountdown == 0
                     ? () {
-                        _startResendCountdown();
+                        final random = Random();
+                        setState(() {
+                          _currentOTP = (100000 + random.nextInt(900000)).toString();
+                          _otpController.clear();
+                          _resendCountdown = 60;
+                        });
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Code resent to your phone')),
+                          const SnackBar(content: Text('New code sent to your phone')),
                         );
+                        _startResendCountdown();
                       }
                     : null,
                 child: Text(

@@ -1,10 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:device_preview/device_preview.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 part 'part1.dart';
 part 'part2.dart';
 part 'part4.dart';
 part 'part5.dart';
+
+// Global Notifications Manager
+class NotificationManager {
+  static final List<NotificationModel> _notifications = [];
+
+  static List<NotificationModel> getNotifications() => _notifications;
+
+  static void addNotification(NotificationModel notification) {
+    _notifications.insert(0, notification);
+  }
+
+  static void clear() {
+    _notifications.clear();
+  }
+}
+
+// Global Orders Manager
+class OrdersManager {
+  static final ValueNotifier<List<OrderModel>> _orders = ValueNotifier<List<OrderModel>>([]);
+
+  static ValueNotifier<List<OrderModel>> get notifier => _orders;
+  static List<OrderModel> getOrders() => _orders.value;
+
+  static void clear() {
+    _orders.value = [];
+  }
+
+  static void addOrder({
+    required String service,
+    required String description,
+    required String icon,
+  }) {
+    final newOrder = OrderModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      service: service,
+      description: description,
+      status: 'pending',
+      timeAgo: 'just now',
+      icon: icon,
+    );
+    final updated = List<OrderModel>.from(_orders.value)..insert(0, newOrder);
+    _orders.value = updated;
+
+    // Determine behavior based on number of orders added so far
+    final count = updated.length;
+    if (count == 1) {
+      // First invited worker: reject after 5s
+      Future.delayed(const Duration(seconds: 5), () {
+        final idx = _orders.value.indexWhere((o) => o.id == newOrder.id);
+        if (idx != -1) {
+          final current = _orders.value[idx];
+          final changed = OrderModel(
+            id: current.id,
+            service: current.service,
+            description: current.description,
+            status: 'rejected',
+            timeAgo: '5s ago',
+            icon: current.icon,
+          );
+          final list = List<OrderModel>.from(_orders.value);
+          list[idx] = changed;
+          _orders.value = list;
+
+          NotificationManager.addNotification(
+            NotificationModel(
+              id: DateTime.now().toString(),
+              title: 'Order Rejected',
+              description: 'Your ${current.service} order has been rejected.',
+              timeAgo: 'just now',
+              icon: '❌',
+              iconColor: Colors.red,
+            ),
+          );
+        }
+      });
+    } else if (count == 2) {
+      // Second invited worker: accept after 7s
+      Future.delayed(const Duration(seconds: 7), () {
+        final idx = _orders.value.indexWhere((o) => o.id == newOrder.id);
+        if (idx != -1) {
+          final current = _orders.value[idx];
+          final changed = OrderModel(
+            id: current.id,
+            service: current.service,
+            description: current.description,
+            status: 'accepted',
+            timeAgo: '7s ago',
+            icon: current.icon,
+          );
+          final list = List<OrderModel>.from(_orders.value);
+          list[idx] = changed;
+          _orders.value = list;
+
+          NotificationManager.addNotification(
+            NotificationModel(
+              id: DateTime.now().toString(),
+              title: 'Order Accepted',
+              description: 'Your ${current.service} order has been accepted!',
+              timeAgo: 'just now',
+              icon: '✅',
+              iconColor: Colors.green,
+            ),
+          );
+        }
+      });
+    } else {
+      // Third and subsequent: stay pending
+    }
+  }
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -15,31 +129,70 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   static bool _isDarkMode = false;
+  static String _userPhoneNumber = '';
+  static String _userName = '';
+  static String _userEmail = '';
+  static String _userGender = '';
 
   static void toggleDarkMode() {
     _isDarkMode = !_isDarkMode;
   }
 
+  static void setPhoneNumber(String phone) {
+    _userPhoneNumber = phone;
+  }
+
+  static String getPhoneNumber() {
+    return _userPhoneNumber;
+  }
+
+  static void setUserName(String name) {
+    _userName = name;
+  }
+
+  static String getUserName() {
+    return _userName;
+  }
+
+  static void setUserEmail(String email) {
+    _userEmail = email;
+  }
+
+  static String getUserEmail() {
+    return _userEmail;
+  }
+
+  static void setUserGender(String gender) {
+    _userGender = gender;
+  }
+
+  static String getUserGender() {
+    return _userGender;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Service Booking',
-      useInheritedMediaQuery: true,
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.yellow),
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.yellow,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaleFactor: 1.25),
+      child: MaterialApp(
+        title: 'Service Booking',
+        useInheritedMediaQuery: true,
+        locale: DevicePreview.locale(context),
+        builder: DevicePreview.appBuilder,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.yellow),
+          brightness: Brightness.light,
+        ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.yellow,
+            brightness: Brightness.dark,
+          ),
           brightness: Brightness.dark,
         ),
-        brightness: Brightness.dark,
+        themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        home: const SplashScreen(),
       ),
-      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const SplashScreen(),
     );
   }
 }
@@ -84,6 +237,13 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _showMore = false;
   bool _isDarkMode = false;
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh when returning to this page
+    setState(() {});
+  }
+
   final List<Service> services = [
     Service(name: 'Builder', imagePath: 'Pics & Icons/Builder.png'),
     Service(name: 'Electrician', imagePath: 'Pics & Icons/Electrician.png'),
@@ -117,42 +277,52 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: _buildDrawer(),
-      body: _selectedIndex == 0
-          ? _buildHomePage()
-          : _selectedIndex == 1
-              ? _buildOrdersPage()
-              : _selectedIndex == 2
-                  ? _buildNotificationsPage()
-                  : _buildSettingsPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Orders'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+    return WillPopScope(
+      onWillPop: () async {
+        setState(() {}); // Refresh when returning
+        return true;
+      },
+      child: Scaffold(
+        drawer: _buildDrawer(),
+        body: _selectedIndex == 0
+            ? _buildHomePage()
+            : _selectedIndex == 1
+                ? _buildOrdersPage()
+                : _selectedIndex == 2
+                    ? _buildNotificationsPage()
+                    : _buildSettingsPage(),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          type: BottomNavigationBarType.fixed,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Orders'),
+            BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHomePage() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header with greeting (avatar left, greeting aligned, menu on right)
-            Container(
-              color: const Color(0xFFd7ff00),
-              padding: const EdgeInsets.only(left: 14, right: 12, top: 12, bottom: 18),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Header with greeting (avatar left, greeting aligned, menu on right)
+          Container(
+            color: const Color(0xFFd7ff00),
+            padding: EdgeInsets.only(
+              left: 14,
+              right: 12,
+              top: MediaQuery.of(context).padding.top + 12,
+              bottom: 18,
+            ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -175,13 +345,31 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Hi,',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hi,',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      _MyAppState.getUserName().isNotEmpty ? _MyAppState.getUserName() : 'there',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -277,8 +465,7 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildServiceCard(Service service) {
@@ -289,8 +476,20 @@ class _MyHomePageState extends State<MyHomePage> {
             _showMore = !_showMore;
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Booked ${service.name}')),
+          // Reset booking state and navigate to place order with selected job
+          BookingState.reset();
+          final selectedJob = Job(
+            id: service.name.toLowerCase(),
+            name: service.name,
+            imagePath: service.imagePath,
+            price: 75.0,
+          );
+          BookingState.selectedJobs = [selectedJob];
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlaceOrderScreen(selectedJob: selectedJob),
+            ),
           );
         }
       },
@@ -321,10 +520,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
           ),
           const SizedBox(height: 8),
-          Text(
-            service.name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor: service.name == 'Heavy Equipment' ? 1.0 : 1.25,
+            ),
+            child: Text(
+              service.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
@@ -332,63 +536,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildOrdersPage() {
-    return Center(
-      child: Text('Orders Page'),
-    );
+    return OrdersScreen();
   }
 
   Widget _buildNotificationsPage() {
-    return SafeArea(
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Notifications',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-            ),
-          ),
-          // Empty state
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'Pics & Icons/Notification.png',
-                    width: 200,
-                    height: 200,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'No Notifications Yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'You have no notifications right now.\nCome back later.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return NotificationsScreen();
   }
 
   Widget _buildSettingsPage() {
@@ -409,15 +561,26 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           Divider(),
           // Logout option
-          ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+          InkWell(
             onTap: () {
+              // Navigate back to phone verification screen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const PhoneVerificationScreen()),
+                (route) => false, // Remove all previous routes
+              );
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Logged out')),
+                const SnackBar(
+                  content: Text('Logged out successfully'),
+                  duration: Duration(seconds: 3),
+                ),
               );
             },
+            hoverColor: Colors.red.withOpacity(0.1),
+            child: ListTile(
+              leading: Icon(Icons.logout, color: Colors.red),
+              title: Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
           ),
         ],
       ),
@@ -599,6 +762,31 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Divider(),
+            // Balance section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Balance :',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '\$${BookingState.userBalance.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFd7ff00),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(),
             // My Profile option
             ListTile(
               leading: Icon(Icons.person_outline),
@@ -606,9 +794,13 @@ class _MyHomePageState extends State<MyHomePage> {
               trailing: Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                // Profile page will be implemented later
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Profile page coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(
+                      phoneNumber: _MyAppState.getPhoneNumber(),
+                    ),
+                  ),
                 );
               },
             ),
@@ -656,6 +848,446 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class OrderModel {
+  final String id;
+  final String service;
+  final String description;
+  final String status; // pending, confirmed, completed, cancelled, assigned, accepted
+  final String timeAgo;
+  final String icon;
+
+  OrderModel({
+    required this.id,
+    required this.service,
+    required this.description,
+    required this.status,
+    required this.timeAgo,
+    required this.icon,
+  });
+}
+
+class NotificationModel {
+  final String id;
+  final String title;
+  final String description;
+  final String timeAgo;
+  final String icon;
+  final Color iconColor;
+
+  NotificationModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.timeAgo,
+    required this.icon,
+    required this.iconColor,
+  });
+}
+
+class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  int _selectedTab = 0; // 0 = Pending, 1 = History
+  late List<OrderModel> orders;
+
+  @override
+  void initState() {
+    super.initState();
+    orders = OrdersManager.getOrders();
+    OrdersManager.notifier.addListener(() {
+      if (mounted) {
+        setState(() {
+          orders = OrdersManager.getOrders();
+        });
+      }
+    });
+  }
+
+  void _setupOrderStatusUpdates() {}
+
+    List<OrderModel> get pendingOrders =>
+      orders.where((o) => o.status == 'pending' || o.status == 'assigned' || o.status == 'confirmed').toList();
+
+    List<OrderModel> get historyOrders =>
+      orders.where((o) => o.status == 'completed' || o.status == 'cancelled' || o.status == 'rejected' || o.status == 'accepted').toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final displayOrders = _selectedTab == 0 ? pendingOrders : historyOrders;
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Text(
+                  'Orders',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Tabs
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedTab = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedTab == 0 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Pending',
+                          style: TextStyle(
+                            fontWeight: _selectedTab == 0 ? FontWeight.bold : FontWeight.w600,
+                            color: _selectedTab == 0 ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedTab = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'History',
+                          style: TextStyle(
+                            fontWeight: _selectedTab == 1 ? FontWeight.bold : FontWeight.w600,
+                            color: _selectedTab == 1 ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Orders List or Empty State
+          displayOrders.isEmpty
+              ? Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Orders Yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You have no active orders right now',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: displayOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = displayOrders[index];
+                      return _buildOrderCard(order);
+                    },
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(OrderModel order) {
+    Color statusColor;
+    String statusLabel;
+
+    switch (order.status) {
+      case 'pending':
+        statusColor = Colors.orange;
+        statusLabel = 'Pending';
+        break;
+      case 'confirmed':
+        statusColor = Colors.green;
+        statusLabel = 'Confirmed';
+        break;
+      case 'completed':
+        statusColor = Colors.green;
+        statusLabel = 'Completed';
+        break;
+      case 'cancelled':
+        statusColor = Colors.red;
+        statusLabel = 'Cancelled';
+        break;
+      case 'rejected':
+        statusColor = Colors.red;
+        statusLabel = 'Rejected';
+        break;
+      case 'assigned':
+        statusColor = Colors.blue;
+        statusLabel = 'Assigned';
+        break;
+      case 'accepted':
+        statusColor = Colors.pink;
+        statusLabel = 'Accepted';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusLabel = 'Unknown';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                order.service,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            order.description,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            order.timeAgo,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Notifications',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+          ),
+
+          Expanded(
+            child: NotificationManager.getNotifications().isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_rounded,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Notifications',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You have no notifications right now',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: NotificationManager.getNotifications().length,
+                    itemBuilder: (context, index) {
+                      final notification = NotificationManager.getNotifications()[index];
+                      return _buildNotificationCard(notification);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard(NotificationModel notification) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+      ),
+      child: Row(
+        children: [
+          // Icon with background
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: notification.iconColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                notification.icon,
+                style: const TextStyle(fontSize: 24),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        notification.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      notification.timeAgo,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  notification.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
