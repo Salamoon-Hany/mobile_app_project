@@ -913,9 +913,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
   }
 
-  void _setupOrderStatusUpdates() {}
-
-    List<OrderModel> get pendingOrders =>
+  List<OrderModel> get pendingOrders =>
       orders.where((o) => o.status == 'pending' || o.status == 'assigned' || o.status == 'confirmed').toList();
 
     List<OrderModel> get historyOrders =>
