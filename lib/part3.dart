@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 
 part 'part1.dart';
 part 'part2.dart';
@@ -76,7 +77,7 @@ class OrdersManager {
               id: DateTime.now().toString(),
               title: 'Order Rejected',
               description: 'Your ${current.service} order has been rejected.',
-              timeAgo: 'just now',
+              createdAt: DateTime.now(),
               icon: '❌',
               iconColor: Colors.red,
             ),
@@ -102,7 +103,7 @@ class OrdersManager {
               id: DateTime.now().toString(),
               title: 'Order Accepted',
               description: 'Your ${current.service} order has been accepted!',
-              timeAgo: 'just now',
+              createdAt: DateTime.now(),
               icon: '✅',
               iconColor: Colors.green,
             ),
@@ -128,6 +129,7 @@ class _MyAppState extends State<MyApp> {
   static String _userName = '';
   static String _userEmail = '';
   static String _userGender = '';
+  static String _userProfileImagePath = '';
 
   static void toggleDarkMode() {
     _isDarkMode = !_isDarkMode;
@@ -163,6 +165,14 @@ class _MyAppState extends State<MyApp> {
 
   static String getUserGender() {
     return _userGender;
+  }
+
+  static void setUserProfileImagePath(String path) {
+    _userProfileImagePath = path;
+  }
+
+  static String getUserProfileImagePath() {
+    return _userProfileImagePath;
   }
 
   @override
@@ -885,7 +895,7 @@ class NotificationModel {
   final String id;
   final String title;
   final String description;
-  final String timeAgo;
+  final DateTime createdAt;
   final String icon;
   final Color iconColor;
 
@@ -893,10 +903,26 @@ class NotificationModel {
     required this.id,
     required this.title,
     required this.description,
-    required this.timeAgo,
+    required this.createdAt,
     required this.icon,
     required this.iconColor,
   });
+
+  String get timeAgo => _formatNotificationTime(createdAt);
+
+  static String _formatNotificationTime(DateTime from) {
+    final diff = DateTime.now().difference(from);
+
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
+  }
 }
 
 class OrdersScreen extends StatefulWidget {
@@ -1174,9 +1200,23 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  late Timer _refreshTimer;
+
   @override
   void initState() {
     super.initState();
+    // Refresh UI every second to update elapsed time
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
   }
 
   @override

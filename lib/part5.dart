@@ -30,6 +30,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (gender.isNotEmpty) {
       _selectedGender = gender;
     }
+    // Load saved profile image path
+    final savedImagePath = _MyAppState.getUserProfileImagePath();
+    if (savedImagePath.isNotEmpty) {
+      _profileImagePath = savedImagePath;
+    }
   }
 
   Future<void> _pickImageFromGallery() async {
@@ -57,6 +62,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error picking image: $e'), duration: const Duration(seconds: 3)),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Camera capture works on mobile devices only'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _profileImagePath = image.path;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Photo captured from camera'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error taking photo: $e'), duration: const Duration(seconds: 3)),
         );
       }
     }
@@ -112,13 +156,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text('Take a Picture'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No camera detected'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  _pickImageFromCamera();
                 },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Delete Picture', style: TextStyle(color: Colors.red)),
+                onTap: _profileImagePath != null
+                    ? () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _profileImagePath = null;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Picture removed (will be deleted on save)'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    : null,
               ),
             ],
           ),
@@ -412,20 +469,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return;
                     }
                     
+                    // Get previous image path for change detection
+                    final previousImagePath = _MyAppState.getUserProfileImagePath();
+                    
                     // Persist values to global state
                     _MyAppState.setUserName(_nameController.text.trim());
                     _MyAppState.setUserEmail(_emailController.text.trim());
                     if (_selectedGender != null) {
                       _MyAppState.setUserGender(_selectedGender!);
                     }
-                    // Add notification
+                    
+                    // Handle profile image changes and notifications
+                    if (_profileImagePath != null) {
+                      // Image was uploaded or changed
+                      if (previousImagePath.isEmpty) {
+                        // New picture uploaded
+                        _MyAppState.setUserProfileImagePath(_profileImagePath!);
+                        NotificationManager.addNotification(
+                          NotificationModel(
+                            id: DateTime.now().toString(),
+                            title: 'Profile Picture Updated',
+                            description: 'Your profile picture has been uploaded successfully.',
+                            createdAt: DateTime.now(),
+                            icon: '📸',
+                            iconColor: Colors.purple,
+                          ),
+                        );
+                      } else if (previousImagePath != _profileImagePath) {
+                        // Picture was changed
+                        _MyAppState.setUserProfileImagePath(_profileImagePath!);
+                        NotificationManager.addNotification(
+                          NotificationModel(
+                            id: DateTime.now().toString(),
+                            title: 'Profile Picture Changed',
+                            description: 'Your profile picture has been changed.',
+                            createdAt: DateTime.now(),
+                            icon: '📸',
+                            iconColor: Colors.purple,
+                          ),
+                        );
+                      }
+                    } else if (previousImagePath.isNotEmpty) {
+                      // Picture was deleted
+                      _MyAppState.setUserProfileImagePath('');
+                      NotificationManager.addNotification(
+                        NotificationModel(
+                          id: DateTime.now().toString(),
+                          title: 'Profile Picture Deleted',
+                          description: 'Your profile picture has been removed.',
+                          createdAt: DateTime.now(),
+                          icon: '🗑️',
+                          iconColor: Colors.red,
+                        ),
+                      );
+                    }
+                    
+                    // Add notification for email change if it was updated
                     if (_emailController.text.trim().isNotEmpty) {
                       NotificationManager.addNotification(
                         NotificationModel(
                           id: DateTime.now().toString(),
                           title: 'Profile Updated',
                           description: 'Your email ${_emailController.text.trim()} has been added to your profile.',
-                          timeAgo: 'just now',
+                          createdAt: DateTime.now(),
                           icon: '✏️',
                           iconColor: Colors.blue,
                         ),

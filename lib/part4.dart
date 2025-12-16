@@ -192,17 +192,69 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    // Placeholder GPS location
-    // In production, use geolocator or location package
-    setState(() {
-      BookingState.userLocation = '40.7128° N, 74.0060° W'; // NYC
+    if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Location set to current location'),
+          content: Text('GPS location works on mobile devices only'),
           duration: Duration(seconds: 3),
         ),
       );
-    });
+      return;
+    }
+
+    try {
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permission denied'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location permission permanently denied. Enable in settings.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        // Format: latitude° N/S, longitude° E/W
+        String latDirection = position.latitude >= 0 ? 'N' : 'S';
+        String lonDirection = position.longitude >= 0 ? 'E' : 'W';
+        BookingState.userLocation = 
+            '${position.latitude.abs().toStringAsFixed(4)}° $latDirection, ${position.longitude.abs().toStringAsFixed(4)}° $lonDirection';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location captured successfully'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error getting location: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -796,7 +848,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                   id: DateTime.now().toString(),
                   title: 'Worker Invited',
                   description: 'You sent an invite to ${worker.name}. Waiting for response...',
-                  timeAgo: 'just now',
+                  createdAt: DateTime.now(),
                   icon: '👤',
                   iconColor: Colors.blue,
                 ),
