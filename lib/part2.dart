@@ -192,6 +192,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final TextEditingController _otpController = TextEditingController();
   int _resendCountdown = 0;
   late String _currentOTP;
+  Timer? _resendTimer;
 
   @override
   void initState() {
@@ -201,23 +202,35 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _otpController.dispose();
     super.dispose();
   }
 
+  String _formatCountdown(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   void _startResendCountdown() {
+    _resendTimer?.cancel();
     setState(() {
       _resendCountdown = 60;
     });
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _resendCountdown--;
-        });
-        if (_resendCountdown > 0) {
-          _startResendCountdown();
-        }
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
       }
+      setState(() {
+        if (_resendCountdown > 0) {
+          _resendCountdown -= 1;
+        }
+        if (_resendCountdown <= 0) {
+          t.cancel();
+        }
+      });
     });
   }
 
@@ -390,7 +403,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         setState(() {
                           _currentOTP = (100000 + random.nextInt(900000)).toString();
                           _otpController.clear();
-                          _resendCountdown = 60;
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('New code sent to your phone')),
@@ -399,11 +411,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       }
                     : null,
                 child: Text(
-                  _resendCountdown == 0 ? 'Resend Code' : 'Resend Code in ${_resendCountdown}s',
+                  _resendCountdown == 0 ? 'Resend Code' : 'Resend Code in ${_formatCountdown(_resendCountdown)}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: _resendCountdown == 0 ? const Color(0xFFd7ff00) : Colors.grey[400],
+                    color: _resendCountdown == 0 ? const Color(0xFFd7ff00) : Colors.grey[600],
                   ),
                 ),
               ),

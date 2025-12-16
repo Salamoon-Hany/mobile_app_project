@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:async';
 
 part 'part1.dart';
 part 'part2.dart';
@@ -41,13 +42,15 @@ class OrdersManager {
     required String description,
     required String icon,
   }) {
+    final now = DateTime.now();
     final newOrder = OrderModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       service: service,
       description: description,
       status: 'pending',
-      timeAgo: 'just now',
       icon: icon,
+      createdAt: now,
+      statusChangedAt: now,
     );
     final updated = List<OrderModel>.from(_orders.value)..insert(0, newOrder);
     _orders.value = updated;
@@ -55,18 +58,14 @@ class OrdersManager {
     // Determine behavior based on number of orders added so far
     final count = updated.length;
     if (count == 1) {
-      // First invited worker: reject after 5s
-      Future.delayed(const Duration(seconds: 5), () {
+      // First invited worker: reject after 20s
+      Future.delayed(const Duration(seconds: 20), () {
         final idx = _orders.value.indexWhere((o) => o.id == newOrder.id);
         if (idx != -1) {
           final current = _orders.value[idx];
-          final changed = OrderModel(
-            id: current.id,
-            service: current.service,
-            description: current.description,
+          final changed = current.copyWith(
             status: 'rejected',
-            timeAgo: '5s ago',
-            icon: current.icon,
+            statusChangedAt: DateTime.now(),
           );
           final list = List<OrderModel>.from(_orders.value);
           list[idx] = changed;
@@ -85,18 +84,14 @@ class OrdersManager {
         }
       });
     } else if (count == 2) {
-      // Second invited worker: accept after 7s
-      Future.delayed(const Duration(seconds: 7), () {
+      // Second invited worker: accept after 20s
+      Future.delayed(const Duration(seconds: 20), () {
         final idx = _orders.value.indexWhere((o) => o.id == newOrder.id);
         if (idx != -1) {
           final current = _orders.value[idx];
-          final changed = OrderModel(
-            id: current.id,
-            service: current.service,
-            description: current.description,
+          final changed = current.copyWith(
             status: 'accepted',
-            timeAgo: '7s ago',
-            icon: current.icon,
+            statusChangedAt: DateTime.now(),
           );
           final list = List<OrderModel>.from(_orders.value);
           list[idx] = changed;
@@ -858,17 +853,32 @@ class OrderModel {
   final String service;
   final String description;
   final String status; // pending, confirmed, completed, cancelled, assigned, accepted
-  final String timeAgo;
   final String icon;
+  final DateTime createdAt;
+  final DateTime statusChangedAt;
 
   OrderModel({
     required this.id,
     required this.service,
     required this.description,
     required this.status,
-    required this.timeAgo,
     required this.icon,
+    required this.createdAt,
+    required this.statusChangedAt,
   });
+
+  OrderModel copyWith({
+    String? status,
+    DateTime? statusChangedAt,
+  }) => OrderModel(
+        id: id,
+        service: service,
+        description: description,
+        status: status ?? this.status,
+        icon: icon,
+        createdAt: createdAt,
+        statusChangedAt: statusChangedAt ?? this.statusChangedAt,
+      );
 }
 
 class NotificationModel {
@@ -1131,7 +1141,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            order.timeAgo,
+            _formatElapsed(order.statusChangedAt),
             style: TextStyle(
               fontSize: 11,
               color: Colors.grey[500],
@@ -1140,6 +1150,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ],
       ),
     );
+  }
+
+  String _formatElapsed(DateTime from) {
+    final diff = DateTime.now().difference(from);
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
   }
 }
 
