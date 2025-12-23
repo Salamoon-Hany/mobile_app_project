@@ -1,4 +1,7 @@
-part of 'part3.dart';
+import 'package:flutter/material.dart';
+import 'dart:math';
+import 'dart:async';
+import 'dashboard.dart';
 
 // Part 2: Phone & OTP Verification Screens
 
@@ -354,7 +357,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     // Validate against the current OTP
                     if (_otpController.text == _currentOTP) {
                       // Save phone number to global state
-                      _MyAppState.setPhoneNumber(widget.phoneNumber);
+                      AppState.setPhoneNumber(widget.phoneNumber);
                       
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Phone verified successfully!')),
@@ -366,7 +369,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProfileScreen(
-                                phoneNumber: _MyAppState.getPhoneNumber(),
+                                phoneNumber: AppState.getPhoneNumber(),
                               ),
                             ),
                           );

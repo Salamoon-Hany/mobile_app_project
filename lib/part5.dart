@@ -1,4 +1,4 @@
-part of 'part3.dart';
+part of 'screens/dashboard.dart';
 
 // Part 5: Profile Screen
 

@@ -1,4 +1,5 @@
-part of 'part3.dart';
+import 'package:flutter/material.dart';
+import 'security_verification.dart';
 
 // Part 1: Onboarding Screens
 

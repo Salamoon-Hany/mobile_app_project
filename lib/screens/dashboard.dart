@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:device_preview/device_preview.dart';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
+import 'welcome.dart';
+import 'security_verification.dart';
+part '../part4.dart';
+part '../part5.dart';
 
-part 'part1.dart';
-part 'part2.dart';
-part 'part4.dart';
-part 'part5.dart';
+// Public bridge so non-part files can access the shared app state without touching
+// the private _MyAppState directly.
+class AppState {
+  static void setPhoneNumber(String phone) => _MyAppState.setPhoneNumber(phone);
+  static String getPhoneNumber() => _MyAppState.getPhoneNumber();
+  
+  static void setUserName(String name) => _MyAppState.setUserName(name);
+  static String getUserName() => _MyAppState.getUserName();
+  
+  static void setUserEmail(String email) => _MyAppState.setUserEmail(email);
+  static String getUserEmail() => _MyAppState.getUserEmail();
+  
+  static void setUserGender(String gender) => _MyAppState.setUserGender(gender);
+  static String getUserGender() => _MyAppState.getUserGender();
+  
+  static void setUserProfileImagePath(String path) => _MyAppState.setUserProfileImagePath(path);
+  static String getUserProfileImagePath() => _MyAppState.getUserProfileImagePath();
+  
+  static void toggleDarkMode() => _MyAppState.toggleDarkMode();
+}
 
 // Global Notifications Manager
 class NotificationManager {
@@ -365,7 +384,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       ),
                                     ),
                                     Text(
-                                      _MyAppState.getUserName().isNotEmpty ? _MyAppState.getUserName() : 'there',
+                                      AppState.getUserName().isNotEmpty ? AppState.getUserName() : 'there',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -803,7 +822,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ProfileScreen(
-                      phoneNumber: _MyAppState.getPhoneNumber(),
+                      phoneNumber: AppState.getPhoneNumber(),
                     ),
                   ),
                 );
@@ -841,7 +860,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     onChanged: (value) {
                       setState(() {
                         _isDarkMode = value;
-                        _MyAppState.toggleDarkMode();
+                        AppState.toggleDarkMode();
                       });
                       // Force rebuild of MyApp
                       (context.findAncestorStateOfType<_MyAppState>())?.setState(() {});
@@ -1358,5 +1377,5 @@ class Service {
   final String name;
   final String? imagePath;
 
-  Service({required this.name, this.imagePath});
+  Service({required this.name, required this.imagePath});
 }
