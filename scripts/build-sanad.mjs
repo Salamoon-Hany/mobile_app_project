@@ -7,6 +7,7 @@ fs.mkdirSync('dist/server',{recursive:true});
 fs.mkdirSync('dist/.openai',{recursive:true});
 fs.cpSync(web,'dist/client',{recursive:true});
 fs.copyFileSync('worker/marketplace.mjs','dist/server/marketplace.mjs');
+fs.copyFileSync('worker/service-experience.mjs','dist/server/service-experience.mjs');
 fs.copyFileSync('worker/index.js','dist/server/index.js');
 fs.copyFileSync('worker/phone-auth.mjs','dist/server/phone-auth.mjs');
 fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');

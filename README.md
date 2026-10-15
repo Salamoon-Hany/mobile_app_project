@@ -41,3 +41,8 @@ Customer/worker profile completion, optional rating comments, auth language sele
 This source mirrors the deployed SANAD version 21 (Sites source commit 9be98c94bc36eefb4de5de8f8b7f42d1dc50e6bc). Flutter lives at the repository root. Worker API and schema migrations are in worker/ and drizzle/. The redesigned worker interface is described in docs/WORKER_UI.md.
 
 Validation: 76 Flutter tests, 43 server/database tests, and a release Web build passed. Native camera/device QA remains outstanding.
+
+
+## Service experience release
+
+Added order chat/photos, completed-order worker reviews, private complaints and owner administration, appointments, price quotes and atomic extra-cost approval. See docs/SERVICE_EXPERIENCE.md. Validation: 81 Flutter tests, 55 server/SQLite tests, static analysis and Web release build passed. Foreground browser alerts are opt-in; closed-app push and real payouts are not integrated.

@@ -1,11 +1,8 @@
 import '../l10n/app_language.dart';
-
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import '../services/account_service.dart';
 import '../services/verification_service.dart';
 import 'auth_landing.dart';
@@ -173,9 +170,12 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
     return _registered
-        ? (Marketplace.shared.isWorker
-              ? const WorkerHome()
-              : const MyHomePage())
+        ? AnimatedBuilder(
+            animation: Marketplace.shared,
+            builder: (_, __) => Marketplace.shared.isWorker
+                ? const WorkerHome()
+                : const MyHomePage(),
+          )
         : const AuthLandingScreen();
   }
 }

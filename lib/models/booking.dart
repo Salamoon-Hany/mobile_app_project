@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-
 import '../models/selected_location.dart';
 import '../models/wallet.dart';
 
@@ -98,6 +97,7 @@ class BookingState {
     _jobs = {for (final job in jobs) job.id: job}.values.toList();
   }
 
+  static DateTime? scheduledAt;
   static String? userLocation;
   static SelectedLocation? selectedLocation;
   static String? locationDetails;
@@ -173,6 +173,7 @@ class BookingState {
     _jobs = [];
     selectedWorker = null;
     userLocation = null;
+    scheduledAt = null;
     selectedLocation = null;
     locationDetails = null;
     photoPath = null;

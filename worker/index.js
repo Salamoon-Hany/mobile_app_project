@@ -6,7 +6,7 @@ export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname.startsWith('/api/marketplace/')) {
       if (!env.DB) return Response.json({error:'TEMPORARILY_UNAVAILABLE'},{status:503});
-      marketplace ??= createMarketplaceHandler({repository:new MarketplaceRepository(env.DB),apiKey:'AIzaSyDErM-SGwWQ76_YTj_AIiZbD8ODBdh9d0g'});
+      marketplace ??= createMarketplaceHandler({repository:new MarketplaceRepository(env.DB),apiKey:'AIzaSyDErM-SGwWQ76_YTj_AIiZbD8ODBdh9d0g',adminEmails:(env.ADMIN_EMAILS??'').split(',').map(x=>x.trim()).filter(Boolean)});
       return marketplace(request);
     }
     if (new URL(request.url).pathname.startsWith('/api/auth/phone/')) {

@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-
 import 'dart:typed_data';
-
 import '../widgets/sanad_ui.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../l10n/app_language.dart';
 import '../models/wallet.dart';
 import '../services/marketplace_service.dart';
 import 'dashboard.dart';
 import 'worker_wallet.dart';
-
+import 'service_tools.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WorkerHome extends StatefulWidget {
@@ -558,6 +554,7 @@ class _WorkerHomeState extends State<WorkerHome> {
           ),
         ),
         const SizedBox(height: 24),
+        const ServiceTools(),
         SanadPanel(
           padding: EdgeInsets.zero,
           child: Column(
@@ -602,11 +599,13 @@ class _WorkerHomeState extends State<WorkerHome> {
       animation: Marketplace.shared,
       builder: (c, _) {
         final m = Marketplace.shared;
-        final pending = m.orders
+        final pending = m.assignedOrders
                 .where((o) => o['status'] == 'pending')
                 .toList(),
-            active = m.orders.where((o) => o['status'] == 'accepted').toList(),
-            history = m.orders
+            active = m.assignedOrders
+                .where((o) => o['status'] == 'accepted')
+                .toList(),
+            history = m.assignedOrders
                 .where((o) => !['pending', 'accepted'].contains(o['status']))
                 .toList();
         return Scaffold(
@@ -1186,6 +1185,24 @@ class _WorkerRequestScreenState extends State<WorkerRequestScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              OrderActivityScreen(orderId: o['id'] as String),
+                        ),
+                      ),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const AppText('Chat, costs & help'),
+                    ),
+                    if ((o['scheduled_at'] as int? ?? 0) > 0)
+                      ListTile(
+                        leading: const Icon(Icons.event),
+                        title: const AppText('Appointment'),
+                        subtitle: Text(localTime(o['scheduled_at'])),
+                      ),
                     if (state == 'accepted')
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 18),

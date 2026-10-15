@@ -1,22 +1,16 @@
 import '../l10n/app_language.dart';
 import '../services/marketplace_service.dart';
 import '../services/camera_capture.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
 import '../services/local_account_store.dart';
 import '../services/phone_login_service.dart';
-
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'dart:typed_data';
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../services/verification_service.dart';
 import '../models/selected_location.dart';
 import 'location_picker.dart';
@@ -24,6 +18,7 @@ import 'welcome.dart';
 import '../widgets/sanad_ui.dart';
 import 'become_worker.dart';
 import 'app_rating.dart';
+import 'service_tools.dart';
 import 'auth_gate.dart';
 import 'delete_account.dart';
 import '../models/phone_number.dart';
@@ -455,7 +450,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildNotificationsPage() {
-    return NotificationsScreen();
+    return const ActivityScreen();
   }
 
   Future<void> _chooseLanguage() async {
@@ -584,6 +579,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           ],
+          const ServiceTools(),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.support_agent),

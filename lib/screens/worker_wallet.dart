@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../l10n/app_language.dart';
 import '../widgets/sanad_ui.dart';
 import '../models/wallet.dart';
@@ -340,11 +339,13 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    if (!m.orders.any((o) => o['status'] == 'completed'))
+                    if (!m.assignedOrders.any(
+                      (o) => o['status'] == 'completed',
+                    ))
                       const SanadPanel(
                         child: AppText('Your completed jobs will appear here.'),
                       ),
-                    for (final o in m.orders.where(
+                    for (final o in m.assignedOrders.where(
                       (o) => o['status'] == 'completed',
                     ))
                       Padding(
@@ -433,6 +434,11 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                                 '${tr('You receive')}: ${egp(w['net'] as int)}',
                               ),
                               Text(w['destination'] as String),
+                              if (w['review_state'] != null)
+                                AppText(w['review_state'] as String),
+                              if ((w['review_note'] as String? ?? '')
+                                  .isNotEmpty)
+                                Text(w['review_note'] as String),
                               Text(
                                 DateTime.fromMillisecondsSinceEpoch(
                                   w['created_at'] as int,

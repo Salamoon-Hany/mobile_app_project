@@ -149,6 +149,11 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
         imageQuality: 70,
       );
       if (!mounted || image == null) return;
+      final bytes = await image.readAsBytes();
+      if (bytes.length > 220000)
+        throw const FormatException('Choose a smaller photo (up to 200 KB).');
+      if (!mounted) return;
+      BookingState.photoBytes = bytes;
       setState(() {
         _photoPath = image.path;
         BookingState.photoPath = image.path;
@@ -536,6 +541,7 @@ class BookingPaymentScreen extends StatefulWidget {
 class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
   late Future<List<Map<String, dynamic>>> _workers;
   String _requestId = Marketplace.id();
+  bool _quote = false;
   bool _busy = false;
   String? _error;
   @override
@@ -559,7 +565,11 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: const AppText('Confirm order'),
-        content: AppText('The amount is reserved until the worker responds.'),
+        content: AppText(
+          _quote
+              ? 'No amount is reserved until you approve the quote.'
+              : 'The amount is reserved until the worker responds.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
@@ -582,11 +592,18 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
       _error = null;
     });
     try {
-      await Marketplace.shared.createOrder(_requestId);
+      if (_quote) {
+        await Marketplace.shared.createQuote(_requestId);
+      } else {
+        await Marketplace.shared.createOrder(_requestId);
+      }
       BookingState.reset();
       if (!mounted) return;
-      Navigator.of(context).pop();
-      Navigator.of(context).pop();
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      navigator.pop();
+      if (_quote)
+        navigator.push(MaterialPageRoute(builder: (_) => const QuotesScreen()));
     } catch (e) {
       if (mounted)
         setState(
@@ -664,7 +681,33 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                                 : null,
                           ),
                           title: Text(w['name'] as String),
-                          subtitle: const AppText('Registered worker'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (w['review_count'] as int? ?? 0) == 0
+                                    ? tr('No reviews yet')
+                                    : '★ ' +
+                                          (w['rating'] as num).toStringAsFixed(
+                                            1,
+                                          ) +
+                                          ' / 5 • ' +
+                                          (w['jobs_completed'] ?? 0).toString(),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => WorkerReviewsScreen(
+                                      uid: w['uid'] as String,
+                                      name: w['name'] as String,
+                                    ),
+                                  ),
+                                ),
+                                child: const AppText('Customer reviews'),
+                              ),
+                            ],
+                          ),
                           trailing: FilledButton(
                             onPressed: () => setState(
                               () => BookingState.selectWorker(
@@ -702,13 +745,69 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
               ),
             ),
             const Divider(),
+            SwitchListTile(
+              value: _quote,
+              onChanged: _busy
+                  ? null
+                  : (v) => setState(() {
+                      _quote = v;
+                      _requestId = Marketplace.id();
+                    }),
+              title: const AppText('Request a price quote'),
+              subtitle: const AppText(
+                'Agree on the price before reserving funds.',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_outlined),
+              title: const AppText('Appointment'),
+              subtitle: Text(
+                localTime(BookingState.scheduledAt?.millisecondsSinceEpoch),
+              ),
+              onTap: _busy
+                  ? null
+                  : () async {
+                      final now = DateTime.now();
+                      final day = await showDatePicker(
+                        context: context,
+                        initialDate: now,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 90)),
+                      );
+                      if (day == null || !context.mounted) return;
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (time == null || !mounted) return;
+                      setState(() {
+                        BookingState.scheduledAt = DateTime(
+                          day.year,
+                          day.month,
+                          day.day,
+                          time.hour,
+                          time.minute,
+                        );
+                        _requestId = Marketplace.id();
+                      });
+                    },
+              trailing: BookingState.scheduledAt == null
+                  ? null
+                  : IconButton(
+                      onPressed: () => setState(() {
+                        BookingState.scheduledAt = null;
+                        _requestId = Marketplace.id();
+                      }),
+                      icon: const Icon(Icons.close),
+                    ),
+            ),
             for (final j in BookingState.selectedJobs)
               ListTile(
                 title: AppText(j.name),
                 trailing: Text(egp(j.pricePiasters)),
               ),
             ListTile(
-              title: const AppText('Total Cost'),
+              title: AppText(_quote ? 'Reference price' : 'Total Cost'),
               trailing: Text(egp(BookingState.totalPiasters)),
             ),
             AnimatedBuilder(
@@ -734,9 +833,15 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       height: 20,
                       child: CircularProgressIndicator(),
                     )
-                  : const AppText('Pay and send invite'),
+                  : AppText(
+                      _quote ? 'Request price quote' : 'Pay and send invite',
+                    ),
             ),
-            const AppText('The amount is reserved until the worker responds.'),
+            AppText(
+              _quote
+                  ? 'No amount is reserved until you approve the quote.'
+                  : 'The amount is reserved until the worker responds.',
+            ),
           ],
         ],
       ),

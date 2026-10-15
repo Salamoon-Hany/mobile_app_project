@@ -1,18 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../screens/dashboard.dart';
+import '../l10n/app_language.dart';
 import '../models/wallet.dart';
 import '../models/selected_location.dart';
 import 'verification_service.dart';
 import 'local_account_store.dart';
+import 'browser_alerts.dart' as alerts;
 
 class Marketplace extends ChangeNotifier {
+  @visibleForTesting
+  Future<Map<String, dynamic>> Function(
+    String path,
+    Map<String, dynamic>? body,
+  )?
+  testTransport;
   static final shared = Marketplace();
   static bool get enabled =>
       VerificationService.configured &&
@@ -22,6 +28,9 @@ class Marketplace extends ChangeNotifier {
   Map<String, dynamic>? workerApplication;
   Map<String, dynamic>? rating;
   List<Map<String, dynamic>> orders = [];
+  List<Map<String, dynamic>> quotes = [], notices = [];
+  bool isAdmin = false, _noticesReady = false;
+  final Set<String> _seenNotices = {};
   List<Map<String, dynamic>> withdrawals = [];
   String? error;
   Timer? _timer;
@@ -29,6 +38,11 @@ class Marketplace extends ChangeNotifier {
   int _generation = 0;
   bool _refreshing = false;
   bool get isWorker => account?['role'] == 'worker';
+  List<Map<String, dynamic>> get assignedOrders => orders
+      .where(
+        (o) => o['worker_uid'] == null || o['worker_uid'] == account?['uid'],
+      )
+      .toList();
   static String id() =>
       '${DateTime.now().microsecondsSinceEpoch}_${UniqueKey().hashCode.abs()}';
   static String? photoData(Uint8List? bytes) {
@@ -85,6 +99,7 @@ class Marketplace extends ChangeNotifier {
     String path, {
     Map<String, dynamic>? body,
   }) {
+    if (testTransport != null) return testTransport!(path, body);
     final generation = _generation;
     final future = _queue.then((_) {
       if (generation != _generation)
@@ -132,6 +147,12 @@ class Marketplace extends ChangeNotifier {
           'This worker is unavailable for these services.',
         'ORDER_CHANGED' => 'The order has changed. Refresh and try again.',
         'APPLICATION_LOCKED' => 'This application can no longer be edited.',
+        'QUOTE_CHANGED' => 'The quote changed. Refresh and review the price.',
+        'REVIEW_LOCKED' => 'Your review has already been submitted.',
+        'INVALID_APPOINTMENT' => 'Choose a time within the next 90 days.',
+        'FORBIDDEN' => 'You do not have permission for this action.',
+        'INVALID_AMOUNT' => 'Enter a valid amount.',
+        'INVALID_COMPLAINT' => 'Choose a reason and describe the problem.',
         'INVALID_RATING' => 'Choose a rating from 1 to 5 stars.',
         'ACCOUNT_DELETING' =>
           'Account deletion is pending. Retry deleting your account.',
@@ -211,6 +232,11 @@ class Marketplace extends ChangeNotifier {
     workerApplication = null;
     rating = null;
     orders = [];
+    quotes = [];
+    notices = [];
+    isAdmin = false;
+    _noticesReady = false;
+    _seenNotices.clear();
     withdrawals = [];
     error = null;
     _generation++;
@@ -236,6 +262,19 @@ class Marketplace extends ChangeNotifier {
 
   void apply(Map<String, dynamic> data) {
     account = Map<String, dynamic>.from(data['account'] as Map);
+    isAdmin = data['isAdmin'] == true;
+    quotes = (data['quotes'] as List? ?? [])
+        .map((x) => Map<String, dynamic>.from(x as Map))
+        .toList();
+    notices = (data['notices'] as List? ?? [])
+        .map((x) => Map<String, dynamic>.from(x as Map))
+        .toList();
+    for (final n in notices) {
+      if (_noticesReady && !_seenNotices.contains(n['id']) && n['read'] != true)
+        alerts.showAlert(tr('SANAD update'), tr(n['body'] as String));
+      _seenNotices.add(n['id'] as String);
+    }
+    _noticesReady = true;
     workerApplication = data['workerApplication'] == null
         ? null
         : Map<String, dynamic>.from(data['workerApplication'] as Map);
@@ -377,6 +416,28 @@ class Marketplace extends ChangeNotifier {
     apply(
       await request(
         'orders',
+        body: {
+          'requestId': requestId,
+          'workerUid': BookingState.selectedWorker!.id,
+          'services': BookingState.selectedJobs.map((j) => j.id).toList(),
+          'details': BookingState.locationDetails ?? '',
+          'photo': photoData(BookingState.photoBytes),
+          'location': {
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'label': location.label,
+            'fromGps': location.fromGps,
+          },
+        },
+      ),
+    );
+  }
+
+  Future<void> createQuote(String requestId) async {
+    final location = BookingState.selectedLocation!;
+    apply(
+      await request(
+        'quotes',
         body: {
           'requestId': requestId,
           'workerUid': BookingState.selectedWorker!.id,

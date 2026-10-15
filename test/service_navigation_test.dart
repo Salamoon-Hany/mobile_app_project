@@ -18,6 +18,10 @@ void main() {
   testWidgets(
     'profile shortcut opens Profile and Settings has the requested order',
     (tester) async {
+      tester.view.physicalSize = const Size(400, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(const MaterialApp(home: MyHomePage()));
       expect(find.byIcon(Icons.menu), findsNothing);
       await tester.tap(find.byKey(const Key('profile-shortcut')));

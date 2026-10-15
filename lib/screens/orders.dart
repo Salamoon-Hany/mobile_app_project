@@ -253,6 +253,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
               },
               child: const AppText('View Picture'),
             ),
+          if (order.cloud)
+            TextButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderActivityScreen(orderId: order.id),
+                ),
+              ),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const AppText('Chat, review & help'),
+            ),
+          if (order.cloud)
+            Builder(
+              builder: (c) {
+                final o = Marketplace.shared.orders
+                    .where((o) => o['id'] == order.id)
+                    .firstOrNull;
+                return (o?['scheduled_at'] as int? ?? 0) > 0
+                    ? Text(localTime(o!['scheduled_at']))
+                    : const SizedBox.shrink();
+              },
+            ),
           if (order.workerName != null) Text(order.workerName!),
           if (order.amount != null) Text(egp(order.amount!)),
           if (order.photo != null)
