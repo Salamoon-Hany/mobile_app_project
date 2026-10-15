@@ -96,3 +96,8 @@ test('the HTML shell is served by the Worker with headers even when ASSETS would
  let assetCalls=0;const env={ASSETS:{fetch:async()=>{assetCalls++;return new Response('unprotected asset');}}};
  for(const path of ['/','/index.html']){const r=await worker.fetch(req(path),env);assert.equal(r.status,200);assert.match(await r.text(),/SANAD/);assert.match(r.headers.get('Content-Security-Policy'),/object-src 'none'/);assert.equal(r.headers.get('Cache-Control'),'private, no-cache');}assert.equal(assetCalls,0);
 });
+
+test('public static URLs proxy through the header boundary without changing browser paths',async()=>{
+ let seen;const env={ASSETS:{fetch:async request=>{seen=new URL(request.url);return new Response('self.runtimeReady=true',{headers:{'Content-Type':'text/javascript','Cache-Control':'public, max-age=0'}});}}};
+ const r=await worker.fetch(req('/flutter_bootstrap.js?version=1'),env);assert.equal(seen.pathname,'/_sanad_static/flutter_bootstrap.js');assert.equal(seen.search,'?version=1');assert.equal(r.headers.get('X-Content-Type-Options'),'nosniff');assert.equal(r.headers.get('Cache-Control'),'private, no-cache');assert.equal(await r.text(),'self.runtimeReady=true');
+});

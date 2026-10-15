@@ -62,6 +62,7 @@ export function protectResponse(response,request){
   headers.delete('X-Powered-By');headers.delete('Server');
   if(new URL(request.url).protocol==='https:')headers.set('Strict-Transport-Security','max-age=31536000');
   if(new URL(request.url).pathname.startsWith('/api/')){headers.set('Cache-Control','no-store');headers.set('Pragma','no-cache');}
+  else if(/text\/html|javascript/.test(headers.get('Content-Type')??''))headers.set('Cache-Control','private, no-cache');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 export async function perimeter(request,env,handle){

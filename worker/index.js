@@ -1,3 +1,4 @@
+import {ASSET_PREFIX} from './asset-paths.mjs';
 import {appShell} from './app-shell.mjs';
 import {createMarketplaceHandler, MarketplaceRepository} from './marketplace.mjs';
 import {createPhoneHandler, PhoneRepository} from './phone-auth.mjs';
@@ -24,7 +25,8 @@ async function route(request, env) {
       return saved.phone(request);
     }
     if(new URL(request.url).pathname.startsWith('/api/'))return Response.json({error:'NOT_FOUND'},{status:404});
-    const asset=await env.ASSETS.fetch(request);
+    const assetUrl=new URL(request.url);assetUrl.pathname=ASSET_PREFIX+assetUrl.pathname;
+    const asset=await env.ASSETS.fetch(new Request(assetUrl,request));
     if(asset.status===404&&(request.headers.get('Accept')?.includes('text/html')||request.headers.get('Sec-Fetch-Mode')==='navigate'))return new Response(request.method==='HEAD'?null:appShell,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-cache'}});
     return asset;
 }

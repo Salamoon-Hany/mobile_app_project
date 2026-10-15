@@ -1,3 +1,4 @@
+import {ASSET_PREFIX} from '../worker/asset-paths.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 const root=process.cwd();
@@ -7,17 +8,20 @@ if(!fs.existsSync(path.join(web,'main.dart.js')))throw Error('Build Flutter Web 
 fs.rmSync('dist',{recursive:true,force:true});
 fs.mkdirSync('dist/server',{recursive:true});
 fs.mkdirSync('dist/.openai',{recursive:true});
-fs.cpSync(web,'dist/client',{recursive:true});
+const assetDirectory=path.join('dist/client',ASSET_PREFIX.slice(1));
+fs.mkdirSync(assetDirectory,{recursive:true});
+fs.cpSync(web,assetDirectory,{recursive:true});
 const shell=fs.readFileSync(path.join(web,'index.html'),'utf8');
 fs.writeFileSync('dist/server/app-shell.mjs','export const appShell='+JSON.stringify(shell)+';\n');
 // Do not let the asset router bypass document security headers.
-fs.rmSync('dist/client/index.html');
-fs.copyFileSync('web/_headers','dist/client/_headers');
+fs.rmSync(path.join(assetDirectory,'index.html'));
+fs.rmSync(path.join(assetDirectory,'_headers'),{force:true});
+
 fs.copyFileSync('worker/marketplace.mjs','dist/server/marketplace.mjs');
 fs.copyFileSync('worker/service-experience.mjs','dist/server/service-experience.mjs');
 fs.copyFileSync('worker/index.js','dist/server/index.js');
 fs.copyFileSync('worker/phone-auth.mjs','dist/server/phone-auth.mjs');
-for(const name of ['security.mjs','photo-validation.mjs'])fs.copyFileSync('worker/'+name,'dist/server/'+name);
+for(const name of ['security.mjs','photo-validation.mjs','asset-paths.mjs'])fs.copyFileSync('worker/'+name,'dist/server/'+name);
 fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');
 fs.writeFileSync('dist/server/wrangler.json',JSON.stringify({name:'sanad',main:'index.js',compatibility_date:'2026-05-15',assets:{directory:'../client',binding:'ASSETS',not_found_handling:'single-page-application',run_worker_first:true},d1_databases:[{binding:'DB',database_name:'site-creator-d1',database_id:'00000000-0000-4000-8000-000000000000'}]},null,2));
 console.log('Packaged Flutter client and phone-login Worker');
