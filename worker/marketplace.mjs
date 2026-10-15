@@ -6,9 +6,21 @@ export const EXPERIENCE_COUNTRIES=['EG','AE','SA','QA','KW','BH','OM','PK','IN']
 const names = ['Builder','Electrician','Plumber','Carpenter','Tiler','Steel Fixer','Plasterer','Repairing','Gardener','Heavy Equipment','Rubbish'];
 const failure=(code,status=400)=>{const e=new Error(code);e.status=status;throw e;};
 const text=(v,max=2000)=>typeof v==='string'&&v.trim().length<=max?v.trim():failure('INVALID_REQUEST');
-const requestId=v=>/^[A-Za-z0-9_-]{8,100}$/.test(v??'')?v:failure('INVALID_REQUEST');
+const requestId=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(v)?v:failure('INVALID_REQUEST');
 function skills(v){if(!Array.isArray(v)||v.length>11||v.some(x=>!SERVICES.includes(x)))failure('INVALID_SERVICES');return [...new Set(v)];}
 const photo=validatedPhoto;
+
+// Legacy display records are never executable orders or a source of funds.
+function legacyRows(rows,fields){
+ if(!Array.isArray(rows))return [];
+ return rows.slice(0,1000).filter(row=>row&&typeof row==='object'&&!Array.isArray(row)).map(row=>{
+  const clean={};for(const field of fields){const value=row[field];if(typeof value==='string'&&value.length<=2000)clean[field]=value;else if(typeof value==='number'&&Number.isSafeInteger(value)&&value>=0&&value<=100000000)clean[field]=value;}
+  if(fields.includes('location')&&row.location&&typeof row.location==='object'){
+   const l=row.location;if(Number.isFinite(l.latitude)&&Number.isFinite(l.longitude)&&Math.abs(l.latitude)<=90&&Math.abs(l.longitude)<=180)clean.location={latitude:l.latitude,longitude:l.longitude,label:typeof l.label==='string'?l.label.slice(0,300):'',fromGps:l.fromGps===true};
+  }
+  return clean;
+ });
+}
 
 const digits=v=>text(v,50).replace(/[٠-٩۰-۹]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.includes(d)?'٠١٢٣٤٥٦٧٨٩'.indexOf(d):'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
 export function normalizeContact(v){let p=digits(v).replace(/[\s()\-]/g,'');if(p.startsWith('00'))p='+'+p.slice(2);if(/^01[0125]\d{8}$/.test(p))p='+20'+p.slice(1);if(!/^\+[1-9]\d{7,14}$/.test(p))failure('INVALID_PHONE');return p;}
@@ -278,7 +290,7 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    else if(route==='/bootstrap'&&request.method==='POST'){
     // Local storage is not a financial authority. Preserve a bounded claim for manual review.
     const claim=body.legacyBalance??0;if(!Number.isSafeInteger(claim)||claim<0||claim>100000000)failure('INVALID_REQUEST');
-    await repository.register(user,{...body,legacyBalance:0});
+    await repository.register(user,{...body,legacyBalance:0,legacyOrders:legacyRows(body.legacyOrders,['id','service','description','status','icon','createdAt','statusChangedAt','location']),legacyReceipts:legacyRows(body.legacyReceipts,['id','amount','method']).filter(x=>typeof x.id==='string'&&Number.isSafeInteger(x.amount)&&['visa','vodafoneCash','fawry'].includes(x.method)).map(x=>({...x,email:user.email}))});
     if(body.hasLegacy===true&&claim>0)await repository.db.prepare('UPDATE marketplace_accounts SET legacy_balance_claim=MAX(legacy_balance_claim,?) WHERE uid=? AND deleted_at=0').bind(claim,user.localId).run();
     data=await repository.snapshot(user.localId);}
    else if(route==='/snapshot'&&request.method==='GET')data=await repository.snapshot(user.localId);
