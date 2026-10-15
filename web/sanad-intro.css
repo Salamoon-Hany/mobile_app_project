@@ -1,0 +1,56 @@
+:root{--sanad-lime:#d7ff00;--sanad-ink:#171917;--sanad-paper:#f7f8f0;--sanad-muted:#62695d}
+html,body{margin:0;width:100%;height:100%;background:var(--sanad-paper)}
+#sanad-app-host{position:fixed;inset:0;width:100%;height:100%;visibility:hidden}
+#sanad-launch,#sanad-launch *{box-sizing:border-box}
+#sanad-launch{position:fixed;inset:0;z-index:9999;overflow:auto;color:var(--sanad-ink);background:var(--sanad-paper);font-family:Tahoma,Arial,sans-serif;direction:rtl;transition:opacity .28s ease}
+#sanad-launch[hidden],#sanad-launch [hidden]{display:none!important}
+#sanad-launch button{font:inherit;cursor:pointer;touch-action:manipulation}
+#sanad-launch button:focus-visible{outline:3px solid #738800;outline-offset:5px}
+.sanad-splash{min-height:100%;display:flex;align-items:center;justify-content:center;text-align:center;background:var(--sanad-ink);color:var(--sanad-paper);padding:36px}
+.sanad-splash-inner{animation:sanad-arrive .85s cubic-bezier(.16,1,.3,1) both}
+.sanad-splash-mark{width:118px;display:block;margin:auto auto 20px;filter:drop-shadow(0 16px 28px #d7ff0015)}
+.sanad-splash h1{font-size:64px;line-height:1.3;margin:0;font-weight:800}
+.sanad-english{direction:ltr;font-size:12px;letter-spacing:.42em;font-weight:700;margin:9px 0 26px;padding-left:.42em;color:var(--sanad-lime)}
+.sanad-tagline{font-size:19px;margin:0;color:#d6dbcd;animation:sanad-arrive .85s .2s both}
+.sanad-loading-line{width:70px;height:3px;margin:40px auto 0;overflow:hidden;border-radius:9px;background:#444b3b}
+.sanad-loading-line:after{content:"";display:block;height:100%;width:100%;background:var(--sanad-lime);transform-origin:right;animation:sanad-fill 2.6s ease both}
+.sanad-intro{min-height:100%;max-width:1100px;margin:auto;padding:32px 44px;display:flex;flex-direction:column;justify-content:center}
+.sanad-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:34px}
+.sanad-brand-small{display:flex;align-items:center;gap:10px;font-weight:800;font-size:29px;line-height:1}
+.sanad-brand-small img{width:29px;height:35px}
+.sanad-skip{border:0;background:transparent;color:var(--sanad-muted);padding:12px 18px;font-size:14px!important;border-radius:16px}
+.sanad-skip:hover{background:#e9eddf}
+.sanad-scene{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:54px;min-height:380px}
+.sanad-art{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#eaf0d7;border-radius:44% 44% 34% 44%;overflow:hidden}
+.sanad-art:before{content:"";position:absolute;width:70%;height:70%;border:1px solid #cbd8ac;border-radius:50%}
+.sanad-art svg{position:relative;width:90%;height:90%;animation:sanad-art-in .65s ease both}
+.sanad-art .float-card{animation:sanad-float 4s ease-in-out infinite}
+.sanad-eyebrow{color:#63742c;font-size:13px;margin:0 0 16px;font-weight:700}
+.sanad-copy h2{font-size:clamp(29px,4vw,42px);line-height:1.45;letter-spacing:-.04em;margin:0 0 18px;white-space:pre-line;color:var(--sanad-ink)}
+.sanad-copy p{font-size:16px;line-height:1.95;margin:0;max-width:410px;color:var(--sanad-muted)}
+.sanad-copy{animation:sanad-arrive .4s ease both}
+.sanad-controls{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-top:42px}
+.sanad-dots{display:flex;align-items:center;gap:9px}
+.sanad-dot{border:0;width:9px;height:9px;background:#c6ccbb;padding:0;border-radius:8px;position:relative}
+.sanad-dot:before{content:"";position:absolute;inset:-12px}
+.sanad-dot[aria-current="step"]{width:29px;background:var(--sanad-ink)}
+.sanad-actions{display:flex;align-items:center;gap:16px}
+.sanad-next{border:0;border-radius:19px;min-height:58px;min-width:180px;padding:16px 28px;background:var(--sanad-lime);color:var(--sanad-ink);font-weight:700!important;display:flex;align-items:center;justify-content:center;gap:24px;transition:background .2s,transform .2s}
+.sanad-next:hover{background:#c8ee00;transform:translateY(-2px)}
+.sanad-back{border:0;background:transparent;color:var(--sanad-muted);padding:12px;border-radius:12px}
+.sanad-footer{display:flex;justify-content:space-between;align-items:center;color:var(--sanad-muted);font-size:12px;margin-top:34px;border-top:1px solid #dfe4d3;padding-top:20px;gap:16px}
+.sanad-status{text-align:center;margin-top:24px;line-height:1.8;font-size:15px}
+.sanad-status:empty{display:none}
+.sanad-retry{margin:12px auto;border:1px solid #a8b57a;border-radius:14px;padding:12px 22px;background:var(--sanad-lime);color:var(--sanad-ink);display:block}
+.sanad-wait{position:fixed;inset:0;background:var(--sanad-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;text-align:center;padding:24px;color:var(--sanad-paper)}
+.sanad-wait img{width:75px;margin-bottom:28px}
+.sanad-wait p{max-width:340px;line-height:1.8}
+.sanad-noscript{position:fixed;inset:0;background:#171917;color:white;display:grid;place-content:center;text-align:center;padding:30px;z-index:10000;font:18px/1.8 Tahoma}
+@keyframes sanad-arrive{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes sanad-art-in{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes sanad-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes sanad-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@media(max-width:700px){.sanad-intro{padding:24px;justify-content:flex-start;min-height:100dvh}.sanad-header{margin-bottom:16px}.sanad-scene{display:flex;flex-direction:column;gap:24px;min-height:0}.sanad-art{width:min(68vw,285px);border-radius:38%;flex-shrink:0}.sanad-copy{text-align:center}.sanad-copy h2{font-size:29px;margin-bottom:12px}.sanad-copy p{font-size:15px;line-height:1.8;max-width:440px}.sanad-eyebrow{margin-bottom:10px}.sanad-controls{flex-direction:column;gap:22px;margin-top:auto;padding-top:28px}.sanad-actions{width:100%;gap:10px}.sanad-next{flex:1}.sanad-back{min-width:52px}.sanad-footer{margin-top:24px;font-size:11px}.sanad-splash h1{font-size:55px}}
+@media(prefers-reduced-motion:reduce){#sanad-launch *,#sanad-launch *:before,#sanad-launch *:after{animation:none!important;transition:none!important}.sanad-next:hover{transform:none}}
+
+#sanad-launch[dir="ltr"]{direction:ltr}

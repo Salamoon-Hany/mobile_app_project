@@ -1,0 +1,59 @@
+name: Validate Flutter, authentication and wallet
+on:
+  push:
+    branches: [main, feature/real-otp-location]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter test
+      - name: Test Sanad Web launch
+        run: node --test test/sanad_web_launch_test.mjs
+      - run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-web-build
+          path: build/web
+          retention-days: 14
+  account_rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rules_tests/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+        working-directory: functions
+      - run: npm test
+        working-directory: functions
+      - run: npm ci
+        working-directory: rules_tests
+      - run: npm test
+        working-directory: rules_tests
+
+  marketplace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test

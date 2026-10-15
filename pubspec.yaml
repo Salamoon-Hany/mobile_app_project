@@ -1,5 +1,5 @@
 name: mobile_app_project
-description: "A new Flutter project."
+description: "Sanad — local home services. ساندينك في كل حاجة."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -28,6 +28,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: ^2.5.4
   device_preview: ^1.1.0
   flutter:
     sdk: flutter
@@ -37,8 +40,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^3.8.1
   firebase_auth: ^5.3.4
+  cloud_firestore: ^5.6.12
+  http: ^1.2.2
   image_picker: ^1.1.2
   geolocator: ^10.1.0
+  flutter_svg: 2.2.1
+  url_launcher: 6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +72,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - Pics & Icons/
+    - assets/figma/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

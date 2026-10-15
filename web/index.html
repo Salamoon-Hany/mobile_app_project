@@ -1,38 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
-
-  <!-- iOS meta tags & icons -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="سند — ساندينك في كل حاجة. اختار خدمات بيتك، حدّد مكانك، واحجز خدمتك.">
+  <meta name="theme-color" content="#171917">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="mobile_app_project">
+  <meta name="apple-mobile-web-app-title" content="سند | SANAD">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>mobile_app_project</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="sanad-intro.css">
+  <link rel="preload" as="image" href="brand/sanad-mark.svg">
+  <title>سند | SANAD — ساندينك في كل حاجة</title>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <div id="sanad-app-host" inert aria-hidden="true"></div>
+  <div id="sanad-launch" dir="rtl" aria-label="مرحباً بك في سند">
+    <section class="sanad-splash" id="sanad-splash">
+      <div class="sanad-splash-inner">
+        <img class="sanad-splash-mark" src="brand/sanad-mark.svg" alt="">
+        <h1>سند</h1><div class="sanad-english">SANAD</div>
+        <p class="sanad-tagline">ساندينك في كل حاجة</p>
+        <div class="sanad-loading-line" aria-hidden="true"></div>
+      </div>
+    </section>
+    <section class="sanad-intro" id="sanad-intro" hidden>
+      <header class="sanad-header">
+        <div class="sanad-brand-small"><img src="brand/sanad-mark.svg" alt="">سند</div>
+        <button class="sanad-skip" id="sanad-skip" type="button">تخطي المقدمة</button>
+      </header>
+      <div class="sanad-scene">
+        <div class="sanad-art" id="sanad-art" aria-hidden="true"></div>
+        <div class="sanad-copy" id="sanad-copy">
+          <div class="sanad-eyebrow" id="sanad-eyebrow"></div>
+          <h2 id="sanad-heading" tabindex="-1"></h2>
+          <p id="sanad-description"></p>
+        </div>
+      </div>
+      <div class="sanad-controls">
+        <nav class="sanad-dots" aria-label="خطوات المقدمة">
+          <button class="sanad-dot" type="button" aria-label="اختيار الخدمة" data-step="0"></button>
+          <button class="sanad-dot" type="button" aria-label="تحديد المكان" data-step="1"></button>
+          <button class="sanad-dot" type="button" aria-label="الحجز والمتابعة" data-step="2"></button>
+        </nav>
+        <div class="sanad-actions">
+          <button class="sanad-next" id="sanad-next" type="button"><span id="sanad-next-label">التالي</span><span aria-hidden="true">←</span></button>
+          <button class="sanad-back" id="sanad-back" type="button" hidden>رجوع</button>
+        </div>
+      </div>
+      <footer class="sanad-footer"><span>ساندينك في كل حاجة</span><span id="sanad-count">١ / ٣</span></footer>
+    </section>
+    <section class="sanad-wait" id="sanad-wait" hidden>
+      <img src="brand/sanad-mark.svg" alt="سند">
+      <p id="sanad-status" role="status" aria-live="polite">بنجهّز سند ليك…</p>
+      <button class="sanad-retry" id="sanad-retry" type="button" hidden>حاول تاني</button>
+    </section>
+  </div>
+  <noscript><div class="sanad-noscript">سند — ساندينك في كل حاجة<br>فعّل JavaScript في المتصفح عشان تفتح التطبيق.</div></noscript>
+  <script type="module" src="sanad-intro.js"></script>
 </body>
 </html>

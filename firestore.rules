@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function verifiedOwner(uid) {
+      return request.auth != null && request.auth.uid == uid &&
+        request.auth.token.get('email_verified', false) == true &&
+        request.auth.token.get('email', '') != '';
+    }
+    function validProfile(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+        data.gender in ['', 'Male', 'Female', 'Other'];
+    }
+    match /users/{uid} {
+      allow get: if verifiedOwner(uid);
+      allow list, delete: if false;
+      allow create: if verifiedOwner(uid) &&
+        request.resource.data.keys().hasOnly(['uid', 'name', 'gender', 'createdAt']) &&
+        request.resource.data.uid == uid && validProfile(request.resource.data) &&
+        request.resource.data.createdAt == request.time;
+      allow update: if verifiedOwner(uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'gender', 'updatedAt']) &&
+        validProfile(request.resource.data) && request.resource.data.updatedAt == request.time;
+    }
+    // Only the backend credits balances or queues receipt emails.
+    match /wallets/{uid} {
+      allow get: if verifiedOwner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /testWallets/{uid} {
+      allow get: if verifiedOwner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

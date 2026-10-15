@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Backend credentials and local dependencies
+functions/node_modules/
+functions/.env*
+functions/.secret*
+.firebase/
+service-account*.json
+
+# Local Firestore rules test dependencies
+rules_tests/node_modules/
+
+# Local Flutter SDK state
+.flutter_tool_state

@@ -1,0 +1,1 @@
+{"name":"sanad-hosting","private":true,"type":"module","scripts":{"build":"node scripts/build-sanad.mjs","test":"node --test worker/test/*.test.mjs"}}
