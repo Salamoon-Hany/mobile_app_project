@@ -251,7 +251,7 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
   const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];if(!token||token.length>8192)failure('INVALID_CREDENTIALS',401);
   const cached=tokens.get(token);if(!force&&cached&&cached.until>now()){if(!allowUnverified&&cached.user.emailVerified!==true)failure('INVALID_CREDENTIALS',401);return cached.user;}
   const r=await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token}),signal:AbortSignal.timeout(10000)});
-  if(!r.ok)failure('INVALID_CREDENTIALS',401);const user=(await r.json()).users?.[0];
+  if(r.status===429)failure('RATE_LIMIT',429);if(r.status>=500||r.status===403)failure('TEMPORARILY_UNAVAILABLE',503);if(!r.ok)failure('INVALID_CREDENTIALS',401);const user=(await r.json()).users?.[0];
   if(!user?.localId||!user.email||(!allowUnverified&&user.emailVerified!==true)||user.disabled)failure('INVALID_CREDENTIALS',401);
   if(tokens.size>500)tokens.clear();tokens.set(token,{user,until:now()+30000});return user;
  }

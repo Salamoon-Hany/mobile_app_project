@@ -33,7 +33,7 @@ export function createPhoneHandler({repository,apiKey,fetchImpl=fetch,now=Date.n
  async function firebase(action,body){
   const response=await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
   let data;try{data=await response.json();}catch{problem('TEMPORARILY_UNAVAILABLE',503);}
-  if(!response.ok){const message=data?.error?.message??'';if(response.status===429||/TOO_MANY_ATTEMPTS|QUOTA_EXCEEDED|TOO_MANY_REQUESTS/.test(message))throw new HttpProblem('RATE_LIMIT',429,900);problem(response.status>=500?'TEMPORARILY_UNAVAILABLE':'INVALID_CREDENTIALS',response.status>=500?503:401);}return data;
+  if(!response.ok){const message=data?.error?.message??'';if(response.status===429||/TOO_MANY_ATTEMPTS|QUOTA_EXCEEDED|TOO_MANY_REQUESTS/.test(message))throw new HttpProblem('RATE_LIMIT',429,900);const unavailable=response.status>=500||response.status===403||/API_KEY_INVALID|INVALID_API_KEY|OPERATION_NOT_ALLOWED|CONFIGURATION_NOT_FOUND|PROJECT_NOT_FOUND/.test(message);problem(unavailable?'TEMPORARILY_UNAVAILABLE':'INVALID_CREDENTIALS',unavailable?503:401);}return data;
  }
  async function lookup(token,phoneRequired=false){
   if(typeof token!=='string'||token.length>8192)problem('INVALID_CREDENTIALS',401);

@@ -83,3 +83,10 @@ test('email login limits incorrect attempts consistently across requests and han
 test('email preflight authenticates an unverified new user without exposing provider tokens',async()=>{
  const {repo,sql}=setup();const handler=createPhoneHandler({repository:new PhoneRepository(repo.db),apiKey:'test',fetchImpl:async(url)=>Response.json(url.includes('lookup')?{users:[{localId:'new',email:'new@example.com',emailVerified:false}]}:{idToken:'private-token',refreshToken:'private-refresh'})});const r=await handler(req('/api/auth/login',{identifier:'new@example.com',password:'correct'}));assert.equal(r.status,200);assert.deepEqual(await r.json(),{uid:'new',email:'new@example.com'});sql.close();
 });
+
+test('identity provider outages are not reported as a wrong password',async()=>{
+ const {repo,sql}=await fixture();
+ const phone=createPhoneHandler({repository:new PhoneRepository(repo.db),apiKey:'isolated',fetchImpl:async()=>Response.json({error:{message:'API_KEY_INVALID'}},{status:400})});
+ const response=await phone(req('/api/auth/login',{identifier:'test@example.invalid',password:'isolated'}));assert.equal(response.status,503);assert.equal((await response.json()).error,'TEMPORARILY_UNAVAILABLE');
+ const apiHandler=createMarketplaceHandler({repository:repo,apiKey:'isolated',fetchImpl:async()=>new Response('private provider details',{status:503})});assert.equal((await apiHandler(api('/snapshot'))).status,503);sql.close();
+});
