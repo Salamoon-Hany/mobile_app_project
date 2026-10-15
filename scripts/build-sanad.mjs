@@ -3,6 +3,8 @@ import path from 'node:path';
 const root=process.cwd();
 const web=path.join(root,'build/web');
 if(!fs.existsSync(path.join(web,'main.dart.js')))throw Error('Build Flutter Web before packaging');
+// Output is derived; remove stale files before exposing a new asset bundle.
+fs.rmSync('dist',{recursive:true,force:true});
 fs.mkdirSync('dist/server',{recursive:true});
 fs.mkdirSync('dist/.openai',{recursive:true});
 fs.cpSync(web,'dist/client',{recursive:true});

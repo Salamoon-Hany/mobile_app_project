@@ -21,7 +21,7 @@ val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPas
     !signingValues.getProperty(it).isNullOrBlank()
 }
 if (releaseRequested) {
-    require(configuredAppId != null && configuredAppId.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+")) && !configuredAppId.startsWith("com.example.")) {
+    require(configuredAppId?.let { it.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+")) && !it.startsWith("com.example.") } == true) {
         "Set SANAD_APPLICATION_ID to the registered production application ID."
     }
     require(hasReleaseSigning && rootProject.file(signingValues.getProperty("storeFile")).isFile) {
