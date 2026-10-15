@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'secure_api.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -75,8 +76,10 @@ class Marketplace extends ChangeNotifier {
     final base = const String.fromEnvironment('MARKETPLACE_API_URL');
     final response = await http
         .post(
-          Uri.parse(
-            '${base.isEmpty ? Uri.base.origin : base}/api/marketplace/signup-role',
+          secureEndpoint(
+            Uri.parse(
+              '${base.isEmpty ? Uri.base.origin : base}/api/marketplace/signup-role',
+            ),
           ),
           headers: {
             'Authorization': 'Bearer $token',
@@ -126,6 +129,7 @@ class Marketplace extends ChangeNotifier {
     final uri = Uri.parse(
       '${base.isEmpty ? Uri.base.origin : base}/api/marketplace/$path',
     );
+    secureEndpoint(uri);
     final headers = {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -140,8 +144,9 @@ class Marketplace extends ChangeNotifier {
         FirebaseAuth.instance.currentUser?.uid != uid)
       throw const FormatException('Your account changed. Please log in again.');
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final code = (jsonDecode(response.body) as Map)['error'];
+      final code = decodeApiObject(response.body)['error'];
       throw FormatException(switch (code) {
+        'RATE_LIMIT' => 'Too many requests. Please wait before trying again.',
         'INSUFFICIENT_BALANCE' => 'Insufficient balance. Add funds first.',
         'WORKER_UNAVAILABLE' =>
           'This worker is unavailable for these services.',
@@ -167,7 +172,7 @@ class Marketplace extends ChangeNotifier {
         _ => 'Could not sync your account. Check your connection and retry.',
       });
     }
-    return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    return decodeApiObject(response.body);
   }
 
   Future<void> attach(User user) async {
@@ -220,6 +225,7 @@ class Marketplace extends ChangeNotifier {
       ),
     );
     await prefs.setBool('sanad.cloud.migrated.${user.uid}', true);
+    await LocalAccountStore.markCloudBacked(user.uid);
     await prefs.remove('sanad.signup.role.${user.uid}');
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
   }

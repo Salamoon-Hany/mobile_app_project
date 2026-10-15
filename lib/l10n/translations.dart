@@ -1,4 +1,16 @@
 const arabicStrings = <String, String>{
+  "A secure connection is required.": "محتاج اتصال آمن عشان تكمل.",
+  "Sign in is temporarily unavailable. Please retry later.":
+      "تسجيل الدخول مش متاح مؤقتًا. جرّب كمان شوية.",
+  "Account creation is temporarily unavailable. Please retry later.":
+      "إنشاء الحساب مش متاح مؤقتًا. جرّب كمان شوية.",
+  "Could not load your account. Please retry later.":
+      "مقدرناش نحمّل حسابك. جرّب كمان شوية.",
+  "Could not complete this action. Please retry later.":
+      "مقدرناش نكمّل الخطوة دي. جرّب كمان شوية.",
+  "The service response is invalid. Please retry.":
+      "حصلت مشكلة في رد الخدمة. جرّب تاني.",
+
   "Previous customer orders": "طلباتي السابقة كعميل",
 
   "Reference price": "سعر استرشادي",

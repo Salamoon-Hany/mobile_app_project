@@ -5,7 +5,7 @@ function checkoutUrl(raw) {
   let result;
   try { result = JSON.parse(raw); } catch (_) { result = raw.trim(); }
   const url = new URL(typeof result === 'string' ? result : result?.url ?? result?.redirectUrl);
-  if (url.protocol !== 'https:' || !['atfawry.com', 'www.atfawry.com', 'atfawry.fawrystaging.com'].includes(url.hostname)) {
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !['atfawry.com', 'www.atfawry.com', 'atfawry.fawrystaging.com'].includes(url.hostname)) {
     throw new Error('INVALID_CHECKOUT_RESPONSE');
   }
   return url.href;

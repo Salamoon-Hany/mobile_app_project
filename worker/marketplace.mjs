@@ -1,3 +1,5 @@
+import {readJson,safeFailure,assertPublicOutput,RequestLimiter} from './security.mjs';
+import {validatedPhoto} from './photo-validation.mjs';
 import {ServiceExperience, appointment} from './service-experience.mjs';
 export const SERVICES = ['builder','electrician','plumber','carpenter','tiler','steel_fixer','plasterer','repairing','gardener','heavy_equipment','rubbish'];
 export const EXPERIENCE_COUNTRIES=['EG','AE','SA','QA','KW','BH','OM','PK','IN'];
@@ -6,7 +8,7 @@ const failure=(code,status=400)=>{const e=new Error(code);e.status=status;throw 
 const text=(v,max=2000)=>typeof v==='string'&&v.trim().length<=max?v.trim():failure('INVALID_REQUEST');
 const requestId=v=>/^[A-Za-z0-9_-]{8,100}$/.test(v??'')?v:failure('INVALID_REQUEST');
 function skills(v){if(!Array.isArray(v)||v.length>11||v.some(x=>!SERVICES.includes(x)))failure('INVALID_SERVICES');return [...new Set(v)];}
-function photo(v){if(v==null)return null;if(typeof v!=='string'||v.length>700000||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v))failure('INVALID_PHOTO');return v;}
+const photo=validatedPhoto;
 
 const digits=v=>text(v,50).replace(/[٠-٩۰-۹]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.includes(d)?'٠١٢٣٤٥٦٧٨٩'.indexOf(d):'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
 export function normalizeContact(v){let p=digits(v).replace(/[\s()\-]/g,'');if(p.startsWith('00'))p='+'+p.slice(2);if(/^01[0125]\d{8}$/.test(p))p='+20'+p.slice(1);if(!/^\+[1-9]\d{7,14}$/.test(p))failure('INVALID_PHONE');return p;}
@@ -85,7 +87,7 @@ export class MarketplaceRepository {
   const rows=await this.db.prepare(`SELECT o.id,o.customer_uid,o.worker_uid,o.request_id,o.services,o.amount,o.details,o.location,o.scheduled_at,o.status,o.created_at,o.updated_at,(o.photo IS NOT NULL) AS has_photo,c.name AS customer_name,COALESCE(NULLIF(c.contact_phone,''),c.phone) AS customer_phone,w.name AS worker_name FROM marketplace_orders o JOIN marketplace_accounts c ON c.uid=o.customer_uid JOIN marketplace_accounts w ON w.uid=o.worker_uid WHERE o.customer_uid=? OR o.worker_uid=? ORDER BY o.created_at DESC LIMIT 1000`).bind(uid,uid).all();
   const deposits=await this.db.prepare('SELECT request_id AS id,amount,method FROM marketplace_deposits WHERE uid=? ORDER BY created_at DESC LIMIT 1000').bind(uid).all();
   const withdrawals=await this.db.prepare('SELECT w.request_id AS id,w.amount,w.fee,w.net,w.method,w.destination,w.status,w.created_at,w.updated_at,r.state AS review_state,r.note AS review_note FROM marketplace_withdrawals w LEFT JOIN withdrawal_reviews r ON r.uid=w.uid AND r.request_id=w.request_id WHERE w.uid=? ORDER BY w.created_at DESC LIMIT 1000').bind(uid).all();
-  return {withdrawals:withdrawals.results,...await this.customerSettings(uid),account:{...account,skills:JSON.parse(account.skills),legacy_orders:JSON.parse(account.legacy_orders),legacy_receipts:undefined},orders:rows.results.map(o=>({...o,services:JSON.parse(o.services),location:JSON.parse(o.location)})),deposits:[...JSON.parse(account.legacy_receipts),...deposits.results]};
+  return {withdrawals:withdrawals.results,...await this.customerSettings(uid),account:{uid:account.uid,role:account.role,name:account.name,phone:account.phone,contact_phone:account.contact_phone,gender:account.gender,national_id_last4:account.national_id_last4,available:account.available,photo:account.photo,balance:account.balance,created_at:account.created_at,skills:JSON.parse(account.skills),legacy_orders:JSON.parse(account.legacy_orders)},orders:rows.results.map(o=>({...o,services:JSON.parse(o.services),location:JSON.parse(o.location)})),deposits:[...JSON.parse(account.legacy_receipts),...deposits.results]};
  }
  async orderPhoto(uid,id){
   const row=await this.db.prepare('SELECT photo FROM marketplace_orders WHERE id=? AND (customer_uid=? OR worker_uid=?)').bind(id,uid,uid).first();if(!row)failure('NOT_FOUND',404);return {photo:row.photo};
@@ -160,7 +162,7 @@ export class MarketplaceRepository {
  async decide(uid,id,action){
   if(!await this.account(uid))failure('ACCOUNT_REQUIRED',409);
   const order=await this.db.prepare('SELECT * FROM marketplace_orders WHERE id=? AND (customer_uid=? OR worker_uid=?)').bind(id,uid,uid).first();if(!order)failure('NOT_FOUND',404);
-  const target={accept:'accepted',reject:'rejected',complete:'completed',cancel:'cancelled'}[action];if(!target)failure('INVALID_REQUEST');
+  const choices={accept:'accepted',reject:'rejected',complete:'completed',cancel:'cancelled'};const target=typeof action==='string'&&Object.hasOwn(choices,action)?choices[action]:null;if(!target)failure('INVALID_REQUEST');
   const allowed=action==='complete'||action==='cancel'?order.customer_uid===uid:order.worker_uid===uid;
   if(!allowed)failure('FORBIDDEN',403);
   if(order.status===target)return;
@@ -230,11 +232,11 @@ export class MarketplaceRepository {
  }
 
 }
-export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=Date.now,adminEmails=[]}){
+export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=Date.now,adminEmails=[],allowDemoFunds=false,limiterEnabled=false}){
  const experience=new ServiceExperience(repository);
  const tokens=new Map();
  async function authenticate(request,allowUnverified=false,force=false){
-  const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];if(!token)failure('INVALID_CREDENTIALS',401);
+  const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];if(!token||token.length>8192)failure('INVALID_CREDENTIALS',401);
   const cached=tokens.get(token);if(!force&&cached&&cached.until>now()){if(!allowUnverified&&cached.user.emailVerified!==true)failure('INVALID_CREDENTIALS',401);return cached.user;}
   const r=await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token}),signal:AbortSignal.timeout(10000)});
   if(!r.ok)failure('INVALID_CREDENTIALS',401);const user=(await r.json()).users?.[0];
@@ -247,7 +249,8 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    if(!['GET','POST'].includes(request.method))failure('METHOD_NOT_ALLOWED',405);
    const deleting=url.pathname==='/api/marketplace/account/delete';
    const user=await authenticate(request,url.pathname==='/api/marketplace/signup-role'&&request.method==='POST',deleting);let body={};
-   if(request.method==='POST'){if(!request.headers.get('Content-Type')?.startsWith('application/json')||Number(request.headers.get('Content-Length'))>1100000)failure('INVALID_REQUEST');const raw=await request.text();if(raw.length>1100000)failure('INVALID_REQUEST');try{body=JSON.parse(raw);}catch{failure('INVALID_REQUEST');}if(!body||typeof body!=='object'||Array.isArray(body))failure('INVALID_REQUEST');}
+   if(request.method==='POST')body=await readJson(request);
+   if(limiterEnabled){const limiter=new RequestLimiter(repository.db,now);await limiter.hit(request.method==='GET'?'read':'write',user.localId,request.method==='GET'?150:30);if(request.method==='POST'&&/\/(deposit|withdrawals|orders)$/.test(url.pathname))await limiter.hit('financial',user.localId,10);}
    let data;const route=url.pathname.replace('/api/marketplace','');
    if(route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
    const isAdmin=user.emailVerified===true&&adminEmails.map(x=>x.toLowerCase()).includes(user.email.toLowerCase());
@@ -272,7 +275,12 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
     data={deleted:true};
    }
    else if(route==='/signup-role'&&request.method==='POST'){await repository.register(user,{role:body.role,name:body.name,phone:body.phone,nationalId:body.nationalId});data={registered:true};}
-   else if(route==='/bootstrap'&&request.method==='POST'){await repository.register(user,body);data=await repository.snapshot(user.localId);}
+   else if(route==='/bootstrap'&&request.method==='POST'){
+    // Local storage is not a financial authority. Preserve a bounded claim for manual review.
+    const claim=body.legacyBalance??0;if(!Number.isSafeInteger(claim)||claim<0||claim>100000000)failure('INVALID_REQUEST');
+    await repository.register(user,{...body,legacyBalance:0});
+    if(body.hasLegacy===true&&claim>0)await repository.db.prepare('UPDATE marketplace_accounts SET legacy_balance_claim=MAX(legacy_balance_claim,?) WHERE uid=? AND deleted_at=0').bind(claim,user.localId).run();
+    data=await repository.snapshot(user.localId);}
    else if(route==='/snapshot'&&request.method==='GET')data=await repository.snapshot(user.localId);
    else if(route==='/workers'&&request.method==='GET')data={workers:await repository.workers(user.localId,(url.searchParams.get('services')??'').split(','))};
    else if(/^\/orders\/[^/]+\/photo$/.test(route)&&request.method==='GET')data=await repository.orderPhoto(user.localId,route.split('/')[2]);
@@ -281,13 +289,14 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    else if(route==='/withdrawals'&&request.method==='POST'){await repository.withdraw(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/withdrawals\/[^/]+\/cancel$/.test(route)&&request.method==='POST'){await repository.cancelWithdrawal(user.localId,route.split('/')[2]);data=await repository.snapshot(user.localId);}
    else if(route==='/profile'&&request.method==='POST'){await repository.update(user.localId,body);data=await repository.snapshot(user.localId);}
-   else if(route==='/deposit'&&request.method==='POST'){await repository.deposit(user.localId,body);data=await repository.snapshot(user.localId);}
+   else if(route==='/deposit'&&request.method==='POST'){if(!allowDemoFunds)failure('PAYMENTS_NOT_CONFIGURED',503);await repository.deposit(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(route==='/orders'&&request.method==='POST'){await repository.createOrder(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/orders\/[^/]+\/decision$/.test(route)&&request.method==='POST'){await repository.decide(user.localId,route.split('/')[2],body.action);data=await repository.snapshot(user.localId);}
    else failure('NOT_FOUND',404);
    if(data?.account){data.isAdmin=isAdmin;data.quotes=await experience.quotes(user.localId);data.notices=await experience.notices(user.localId);}
+   assertPublicOutput(data);
    return Response.json(data,{headers:{'Cache-Control':'no-store'}});
-  }catch(e){const code=e.message?.includes('INSUFFICIENT_BALANCE')?'INSUFFICIENT_BALANCE':e.message;return Response.json({error:e.status||code==='INSUFFICIENT_BALANCE'?code:'TEMPORARILY_UNAVAILABLE'},{status:e.status??(code==='INSUFFICIENT_BALANCE'?409:503),headers:{'Cache-Control':'no-store'}});}
+  }catch(e){return safeFailure(e,request); }
  };
 }
 export function serviceNames(services){return services.map(s=>names[SERVICES.indexOf(s)]).join(', ');}

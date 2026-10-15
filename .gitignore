@@ -56,3 +56,27 @@ rules_tests/node_modules/
 
 # Local Flutter SDK state
 .flutter_tool_state
+
+# Credentials and local runtime data
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+**/key.properties
+**/service-account*.json
+**/*-firebase-adminsdk-*.json
+**/.secret*
+**/.secrets/
+**/node_modules/
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/*.log

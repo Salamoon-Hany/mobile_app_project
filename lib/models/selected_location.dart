@@ -12,6 +12,15 @@ class SelectedLocation {
 
   factory SelectedLocation.fromPhoton(Map<String, dynamic> feature) {
     final coordinates = ((feature['geometry'] as Map)['coordinates'] as List);
+    if (coordinates.length < 2 ||
+        coordinates[0] is! num ||
+        coordinates[1] is! num ||
+        !(coordinates[0] as num).isFinite ||
+        !(coordinates[1] as num).isFinite ||
+        (coordinates[0] as num).abs() > 180 ||
+        (coordinates[1] as num).abs() > 90) {
+      throw const FormatException('The location response is invalid.');
+    }
     final props = feature['properties'] as Map;
     final parts = <String>{
       for (final key in [

@@ -10,41 +10,35 @@ void main() {
       expect(() => normalizeEmail(input), throwsFormatException);
     }
   });
-  test('unexpected Firebase errors expose only a safe diagnostic code', () {
+  test('unexpected Firebase errors hide diagnostic details', () {
     final message = VerificationService.message(
       FirebaseAuthException(
         code: 'unexpected-provider-error',
         message: 'password=secret token=private email=private@example.com',
       ),
     );
-    expect(message, contains('auth/unexpected-provider-error'));
+    expect(message, 'Could not complete this action. Please retry later.');
     expect(message, isNot(contains('secret')));
     expect(message, isNot(contains('private')));
   });
-  test(
-    'signup restrictions and blocked profiles have specific recovery steps',
-    () {
-      expect(
-        VerificationService.message(
-          FirebaseAuthException(code: 'admin-restricted-operation'),
-        ),
-        contains('Account creation is disabled'),
-      );
-      expect(
-        VerificationService.message(
-          FirebaseAuthException(code: 'operation-not-allowed'),
-        ),
-        contains('Enable Email/Password'),
-      );
-      expect(
-        VerificationService.message(
-          FirebaseException(
-            plugin: 'cloud_firestore',
-            code: 'permission-denied',
-          ),
-        ),
-        contains('Publish the project Firestore rules'),
-      );
-    },
-  );
+  test('internal setup failures show safe recovery messages', () {
+    expect(
+      VerificationService.message(
+        FirebaseAuthException(code: 'admin-restricted-operation'),
+      ),
+      contains('Account creation is temporarily unavailable'),
+    );
+    expect(
+      VerificationService.message(
+        FirebaseAuthException(code: 'operation-not-allowed'),
+      ),
+      contains('Sign in is temporarily unavailable'),
+    );
+    expect(
+      VerificationService.message(
+        FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'),
+      ),
+      contains('Could not load your account'),
+    );
+  });
 }

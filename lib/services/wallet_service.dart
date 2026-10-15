@@ -1,8 +1,7 @@
+import 'secure_api.dart';
 import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-
 import '../models/wallet.dart';
 import 'local_account_store.dart';
 import 'marketplace_service.dart';
@@ -72,11 +71,7 @@ class WalletService {
     final token = await user.getIdToken();
     _sameUser(user);
     final uri = Uri.parse('${_base.replaceAll(RegExp(r'/+$'), '')}/$path');
-    if (uri.scheme != 'https' &&
-        uri.host != '127.0.0.1' &&
-        uri.host != 'localhost') {
-      throw const FormatException('The payment service must use HTTPS.');
-    }
+    secureEndpoint(uri);
     final headers = {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -100,7 +95,7 @@ class WalletService {
         'The payment could not complete. Your balance has not changed. Retry checking its status.',
       );
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decodeApiObject(response.body);
     if (data['mode'] is String) _mode = data['mode'] as String;
     return data;
   }

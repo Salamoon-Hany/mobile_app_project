@@ -5,7 +5,6 @@ import 'package:mobile_app_project/services/account_service.dart';
 import 'package:mobile_app_project/screens/dashboard.dart';
 import 'package:mobile_app_project/models/wallet.dart';
 import 'package:mobile_app_project/models/selected_location.dart';
-
 import 'dart:typed_data';
 
 void main() {
@@ -122,4 +121,20 @@ void main() {
     expect(WalletState.shared.balancePiasters, 10000);
     expect(BookingState.paymentCompleted, isFalse);
   });
+  test(
+    'acknowledged cloud accounts remove local PII copies and stop caching them',
+    () async {
+      attach('cloud-account');
+      AppState.setUserProfileImageBytes(Uint8List.fromList([1, 2, 3]));
+      await LocalAccountStore.flush();
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey('sanad.account.v1.cloud-account'), isTrue);
+      await prefs.setBool('sanad.cloud.migrated.cloud-account', true);
+      await LocalAccountStore.markCloudBacked('cloud-account');
+      WalletState.shared.setBalance(500);
+      LocalAccountStore.save();
+      await LocalAccountStore.flush();
+      expect(prefs.containsKey('sanad.account.v1.cloud-account'), isFalse);
+    },
+  );
 }

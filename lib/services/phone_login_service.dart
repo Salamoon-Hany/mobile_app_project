@@ -1,9 +1,8 @@
 import 'dart:convert';
-
+import 'secure_api.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
 import '../models/phone_number.dart';
 
 class PhoneLoginAccount {
@@ -39,13 +38,14 @@ class PhoneLoginService {
     Map<String, dynamic> data, {
     String? token,
   }) async {
-    if (_base.scheme != 'https' &&
-        !['localhost', '127.0.0.1'].contains(_base.host)) {
-      throw const FormatException('Mobile login requires a secure connection.');
-    }
+    secureEndpoint(_base);
     final response = await _client
         .post(
-          _base.resolve('/api/auth/phone/$action'),
+          _base.resolve(
+            action == 'email-login'
+                ? '/api/auth/login'
+                : '/api/auth/phone/$action',
+          ),
           headers: {
             'Content-Type': 'application/json',
             if (token != null) 'Authorization': 'Bearer $token',
@@ -65,7 +65,24 @@ class PhoneLoginService {
       throw const FormatException(
         'Mobile login is temporarily unavailable. Sign in with your email or try again.',
       );
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    return decodeApiObject(response.body, maximum: 8192);
+  }
+
+  Future<PhoneLoginAccount> checkEmail(String email, String password) async {
+    final data = await _post('email-login', {
+      'identifier': email,
+      'password': password,
+    });
+    if (data['uid'] is! String ||
+        (data['uid'] as String).isEmpty ||
+        (data['uid'] as String).length > 128 ||
+        data['email'] is! String ||
+        (data['email'] as String).toLowerCase() != email.toLowerCase()) {
+      throw const FormatException(
+        'Sign in is temporarily unavailable. Please retry later.',
+      );
+    }
+    return PhoneLoginAccount(data['uid'] as String, data['email'] as String);
   }
 
   Future<PhoneLoginAccount> resolve(String phone, String password) async {

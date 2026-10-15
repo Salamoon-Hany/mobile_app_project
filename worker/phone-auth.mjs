@@ -1,19 +1,15 @@
-const errorResponse = (error, status) => Response.json({error}, {status, headers: {'Cache-Control':'no-store'}});
-const normalizePhone = input => {
-  let phone = String(input ?? '').trim().replace(/[\s()\-]/g, '');
-  phone = phone.replace(/[٠-٩۰-۹]/g, d => String('٠١٢٣٤٥٦٧٨٩'.includes(d) ? '٠١٢٣٤٥٦٧٨٩'.indexOf(d) : '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-  if (phone.startsWith('00')) phone = '+' + phone.slice(2);
-  if (/^01[0125]\d{8}$/.test(phone)) phone = '+20' + phone.slice(1);
-  if (!/^\+[1-9]\d{7,14}$/.test(phone)) throw new Error('INVALID_REQUEST');
-  return phone;
+import {HttpProblem,problem,readJson,safeFailure,digest,RequestLimiter,assertPublicOutput} from './security.mjs';
+const normalizePhone=input=>{
+ if(typeof input!=='string'||input.length>50)problem('INVALID_REQUEST');
+ let phone=input.trim().replace(/[\s()\-]/g,'').replace(/[٠-٩۰-۹]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.includes(d)?'٠١٢٣٤٥٦٧٨٩'.indexOf(d):'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+ if(phone.startsWith('00'))phone='+'+phone.slice(2);if(/^01[0125]\d{8}$/.test(phone))phone='+20'+phone.slice(1);
+ if(!/^\+[1-9]\d{7,14}$/.test(phone))problem('INVALID_REQUEST');return phone;
 };
-const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), x => x.toString(16).padStart(2,'0')).join('');
-
 export class PhoneRepository {
   constructor(db) { this.db = db; }
-  async limit(key, maximum, now) {
-    const window = Math.floor(now / 60000);
-    const result = await this.db.prepare('INSERT INTO phone_login_limits (key, window, count) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN window = excluded.window THEN count + 1 ELSE 1 END, window = excluded.window RETURNING count').bind(key, window).first();
+  async limit(key, maximum, now, period=60000) {
+    const window = Math.floor(now / period);
+    const result = await this.db.prepare('INSERT INTO phone_login_limits (key, window, count) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN window = excluded.window THEN MIN(count + 1,10000) ELSE 1 END, window = excluded.window RETURNING count').bind(key, window).first();
     return result.count <= maximum;
   }
   async find(phone) { return this.db.prepare('SELECT uid, email FROM phone_login_aliases WHERE phone = ?').bind(phone).first(); }
@@ -28,58 +24,45 @@ export class PhoneRepository {
   }
 }
 
-export function createPhoneHandler({repository, apiKey, fetchImpl = fetch, now = Date.now}) {
-  async function firebase(action, body) {
-    const response = await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(apiKey)}`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:AbortSignal.timeout(15000),
-    });
-    if (!response.ok) throw new Error(response.status === 429 ? 'RATE_LIMIT' : 'INVALID_CREDENTIALS');
-    return response.json();
-  }
-  async function lookup(idToken) {
-    const result = await firebase('lookup', {idToken});
-    const user = result.users?.[0];
-    if (!user?.localId || !user.email || user.emailVerified !== true || !user.phoneNumber || user.disabled) throw new Error('INVALID_CREDENTIALS');
-    if(repository.isDeleted&&await repository.isDeleted(user.localId))throw new Error('INVALID_CREDENTIALS');
-    user.phoneNumber = normalizePhone(user.phoneNumber);
-    return user;
-  }
-  return async request => {
-    try {
-      const url = new URL(request.url);
-      if (request.method !== 'POST') return errorResponse('METHOD_NOT_ALLOWED',405);
-      if (request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) return errorResponse('FORBIDDEN',403);
-      if (!request.headers.get('Content-Type')?.startsWith('application/json')) return errorResponse('INVALID_REQUEST',400);
-      if (Number(request.headers.get('Content-Length')) > 8192) return errorResponse('INVALID_REQUEST',400);
-      const bodyText = await request.text();
-      if (bodyText.length > 8192) return errorResponse('INVALID_REQUEST',400);
-      let body; try { body=JSON.parse(bodyText); } catch { return errorResponse('INVALID_REQUEST',400); }
-      const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-      if (!await repository.limit('ip:'+await hash(ip),20,now())) return errorResponse('RATE_LIMIT',429);
-      if (url.pathname === '/api/auth/phone/register') {
-        const token = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
-        if (!token) return errorResponse('INVALID_CREDENTIALS',401);
-        const user = await lookup(token);
-        await repository.save(user);
-        return Response.json({registered:true}, {headers:{'Cache-Control':'no-store'}});
-      }
-      if (url.pathname !== '/api/auth/phone/login') return errorResponse('NOT_FOUND',404);
-      const phone = normalizePhone(body?.phone);
-      if (typeof body?.password !== 'string' || !body.password || body.password.length > 4096) return errorResponse('INVALID_REQUEST',400);
-      if (!await repository.limit('phone:'+await hash(phone),6,now())) return errorResponse('RATE_LIMIT',429);
-      const account = await repository.find(phone);
-      if (!account) return errorResponse('INVALID_CREDENTIALS',401);
-      const signed = await firebase('signInWithPassword', {email:account.email,password:body.password,returnSecureToken:true});
-      const current = await lookup(signed.idToken);
-      if (current.localId !== account.uid || current.phoneNumber !== phone || current.email.toLowerCase() !== account.email.toLowerCase()) return errorResponse('INVALID_CREDENTIALS',401);
-      // Reveal the account email only after Firebase verifies the password and
-      // confirms that the phone is still linked. Never return session tokens.
-      return Response.json({email:current.email,uid:current.localId}, {headers:{'Cache-Control':'no-store'}});
-    } catch(error) {
-      if (error.message === 'RATE_LIMIT') return errorResponse('RATE_LIMIT',429);
-      if (error.message === 'INVALID_REQUEST') return errorResponse('INVALID_REQUEST',400);
-      if (error.message === 'INVALID_CREDENTIALS') return errorResponse('INVALID_CREDENTIALS',401);
-      return errorResponse('TEMPORARILY_UNAVAILABLE',503);
-    }
-  };
+PhoneRepository.prototype.clearLimit=async function(key){await this.db.prepare('DELETE FROM phone_login_limits WHERE key=?').bind(key).run();};
+
+export function createPhoneHandler({repository,apiKey,fetchImpl=fetch,now=Date.now}){
+ const limiter=repository.db?new RequestLimiter(repository.db,now):null;
+ async function limit(scope,identity,max,period=60000){if(limiter)return limiter.hit(scope,identity,max,period);if(!await repository.limit(scope+':'+await digest(identity),max,now(),period))throw new HttpProblem('RATE_LIMIT',429,Math.ceil((period-now()%period)/1000));}
+ async function clear(scope,identity){if(limiter)return limiter.clear(scope,identity);if(repository.clearLimit)await repository.clearLimit(scope+':'+await digest(identity));}
+ async function firebase(action,body){
+  const response=await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+  let data;try{data=await response.json();}catch{problem('TEMPORARILY_UNAVAILABLE',503);}
+  if(!response.ok){const message=data?.error?.message??'';if(response.status===429||/TOO_MANY_ATTEMPTS|QUOTA_EXCEEDED|TOO_MANY_REQUESTS/.test(message))throw new HttpProblem('RATE_LIMIT',429,900);problem(response.status>=500?'TEMPORARILY_UNAVAILABLE':'INVALID_CREDENTIALS',response.status>=500?503:401);}return data;
+ }
+ async function lookup(token,phoneRequired=false){
+  if(typeof token!=='string'||token.length>8192)problem('INVALID_CREDENTIALS',401);
+  const user=(await firebase('lookup',{idToken:token})).users?.[0];
+  if(typeof user?.localId!=='string'||!user.localId||user.localId.length>128||typeof user.email!=='string'||user.email.length>254||user.disabled)problem('INVALID_CREDENTIALS',401);
+  if(repository.isDeleted&&await repository.isDeleted(user.localId))problem('INVALID_CREDENTIALS',401);
+  if(phoneRequired){if(user.emailVerified!==true||!user.phoneNumber)problem('INVALID_CREDENTIALS',401);user.phoneNumber=normalizePhone(user.phoneNumber);}return user;
+ }
+ return async request=>{
+  try{
+   const url=new URL(request.url);if(request.method!=='POST')problem('METHOD_NOT_ALLOWED',405);
+   if(request.headers.has('Origin')&&request.headers.get('Origin')!==url.origin)problem('FORBIDDEN',403);
+   const body=await readJson(request,8192),ip=request.headers.get('CF-Connecting-IP')??'unknown';await limit('auth-ip',ip,30);
+   if(url.pathname==='/api/auth/phone/register'){
+    const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];const user=await lookup(token,true);await repository.save(user);return Response.json({registered:true},{headers:{'Cache-Control':'no-store'}});
+   }
+   if(!['/api/auth/login','/api/auth/phone/login'].includes(url.pathname))problem('NOT_FOUND',404);
+   const raw=url.pathname==='/api/auth/login'?body.identifier:body.phone;
+   if(typeof raw!=='string'||raw.length>254||typeof body.password!=='string'||!body.password||body.password.length>4096)problem('INVALID_REQUEST');
+   const emailLogin=raw.includes('@'),identifier=emailLogin?raw.trim().toLowerCase():normalizePhone(raw);
+   if(emailLogin&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))problem('INVALID_REQUEST');
+   await limit('login-ip',ip,120,900000);await limit('login-identifier',identifier,5,900000);
+   const alias=emailLogin?null:await repository.find(identifier);if(!emailLogin&&!alias)problem('INVALID_CREDENTIALS',401);
+   const email=emailLogin?identifier:alias.email;
+   const signed=await firebase('signInWithPassword',{email,password:body.password,returnSecureToken:true});
+   const current=await lookup(signed.idToken,!emailLogin);
+   if(current.email.toLowerCase()!==email.toLowerCase()||(!emailLogin&&(current.localId!==alias.uid||current.phoneNumber!==identifier)))problem('INVALID_CREDENTIALS',401);
+   await clear('login-identifier',identifier);
+   const output={email:current.email,uid:current.localId};assertPublicOutput(output);return Response.json(output,{headers:{'Cache-Control':'no-store'}});
+  }catch(error){return safeFailure(error,request);}
+ };
 }

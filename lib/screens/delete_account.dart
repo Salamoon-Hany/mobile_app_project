@@ -1,9 +1,8 @@
+import '../services/secure_api.dart';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-
 import '../l10n/app_language.dart';
 import '../services/account_service.dart';
 import '../services/local_account_store.dart';
@@ -49,8 +48,10 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       const base = String.fromEnvironment('MARKETPLACE_API_URL');
       final response = await http
           .post(
-            Uri.parse(
-              '${base.isEmpty ? Uri.base.origin : base}/api/marketplace/account/delete',
+            secureEndpoint(
+              Uri.parse(
+                '${base.isEmpty ? Uri.base.origin : base}/api/marketplace/account/delete',
+              ),
             ),
             headers: {
               'Authorization': 'Bearer $token',

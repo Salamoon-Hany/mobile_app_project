@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../screens/dashboard.dart';
 import '../models/wallet.dart';
 import '../models/booking.dart';
@@ -17,6 +15,7 @@ class LocalAccountStore {
   static bool _restoring = false;
   static bool _started = false;
   static final Set<String> _restoredRecords = {};
+  static final Set<String> _cloudBacked = {};
   static bool hadSavedRecords(String uid) => _restoredRecords.contains(uid);
   static Object? _lastError;
   static Future<void> initialize() async {
@@ -29,7 +28,10 @@ class LocalAccountStore {
 
   static String _key(String uid) => 'sanad.account.v1.$uid';
   static void restore(String uid) {
-    if (_preferences == null || WalletServiceBackend.enabled) return;
+    if (_preferences == null ||
+        WalletServiceBackend.enabled ||
+        _preferences!.getBool('sanad.cloud.migrated.$uid') == true)
+      return;
     final raw = _preferences!.getString(_key(uid));
     if (raw == null) return;
     _restoredRecords.add(uid);
@@ -87,7 +89,8 @@ class LocalAccountStore {
         _preferences == null ||
         uid == null ||
         WalletState.shared.ownerUid != uid ||
-        WalletServiceBackend.enabled)
+        WalletServiceBackend.enabled ||
+        _cloudBacked.contains(uid))
       return;
     final snapshot = jsonEncode({
       'version': 1,
@@ -130,9 +133,19 @@ class LocalAccountStore {
     });
   }
 
+  // Remove duplicate location/photo/order data only after the server acknowledged it.
+  static Future<void> markCloudBacked(String uid) async {
+    _cloudBacked.add(uid);
+    await _pending;
+    final prefs = _preferences ?? await SharedPreferences.getInstance();
+    await prefs.remove(_key(uid));
+    _restoredRecords.remove(uid);
+  }
+
   static Future<void> erase(String uid) async {
     await _pending;
     _restoredRecords.remove(uid);
+    _cloudBacked.remove(uid);
     final prefs = _preferences ?? await SharedPreferences.getInstance();
     for (final key in [
       _key(uid),

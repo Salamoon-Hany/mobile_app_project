@@ -15,9 +15,13 @@ const environment=defineString('FAWRY_ENVIRONMENT',{default:'staging'});
 const mailEnabled=defineString('RECEIPT_EMAIL_ENABLED',{default:'false'});
 const returnUrl=defineString('WALLET_RETURN_URL',{default:'https://eslam-mobile-service-app.eslam-hanyram11.chatgpt.site/'});
 exports.walletApi=onRequest({region:'europe-west1',secrets:[key],maxInstances:3,cors:[
-  'https://eslam-mobile-service-app.eslam-hanyram11.chatgpt.site',/^http:\/\/localhost(:\d+)?$/,
+  'https://eslam-mobile-service-app.eslam-hanyram11.chatgpt.site',
 ]},async(req,res)=>{
   res.set('Cache-Control','no-store');
+  res.set('X-Content-Type-Options','nosniff');
+  res.set('Referrer-Policy','no-referrer');
+  res.set('Strict-Transport-Security','max-age=31536000');
+  if (Number(req.get('Content-Length'))>32768) return res.status(413).json({error:'PAYLOAD_TOO_LARGE'});
   const db=getFirestore(), mode=environment.value();
   const collection=mode==='live'?'walletDeposits':'testWalletDeposits';
   const path=req.path.replace(/\/+$/,'');

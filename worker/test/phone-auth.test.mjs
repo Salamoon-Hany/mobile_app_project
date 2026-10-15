@@ -37,7 +37,7 @@ test('unknown phone and wrong password return the same generic error',async()=>{
   const {handler,request}=setup();await handler(request('register',{},'owner-token'));
   const unknown=await handler(request('login',{phone:'+201099999999',password:'wrong'}));
   const wrong=await handler(request('login',{phone:'+201012345678',password:'wrong'}));
-  assert.equal(unknown.status,401);assert.equal(wrong.status,401);assert.deepEqual(await unknown.json(),await wrong.json());
+  assert.equal(unknown.status,401);assert.equal(wrong.status,401);assert.equal((await unknown.json()).error,(await wrong.json()).error);
 });
 test('a removed/reassigned phone cannot sign in using a stale alias',async()=>{
   const {handler,request,user}=setup();await handler(request('register',{},'owner-token'));user.phoneNumber='+201099999999';

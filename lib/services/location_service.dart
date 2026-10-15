@@ -1,8 +1,7 @@
+import 'secure_api.dart';
 import 'dart:convert';
-
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-
 import '../models/selected_location.dart';
 
 class LocationProblem implements Exception {
@@ -19,8 +18,9 @@ class LocationProblem implements Exception {
 class LocationService {
   final http.Client? client;
   LocationService({this.client});
-  Future<http.Response> _get(Uri uri) =>
-      client != null ? client!.get(uri) : http.get(uri);
+  Future<http.Response> _get(Uri uri) => client != null
+      ? client!.get(secureEndpoint(uri))
+      : http.get(secureEndpoint(uri));
   static const _base = String.fromEnvironment(
     'GEOCODER_URL',
     defaultValue: 'https://photon.komoot.io',

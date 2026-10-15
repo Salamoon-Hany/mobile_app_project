@@ -10,6 +10,7 @@ fs.copyFileSync('worker/marketplace.mjs','dist/server/marketplace.mjs');
 fs.copyFileSync('worker/service-experience.mjs','dist/server/service-experience.mjs');
 fs.copyFileSync('worker/index.js','dist/server/index.js');
 fs.copyFileSync('worker/phone-auth.mjs','dist/server/phone-auth.mjs');
+for(const name of ['security.mjs','photo-validation.mjs'])fs.copyFileSync('worker/'+name,'dist/server/'+name);
 fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');
 fs.writeFileSync('dist/server/wrangler.json',JSON.stringify({name:'sanad',main:'index.js',compatibility_date:'2026-05-15',assets:{directory:'../client',binding:'ASSETS',not_found_handling:'single-page-application',run_worker_first:true},d1_databases:[{binding:'DB',database_name:'site-creator-d1',database_id:'00000000-0000-4000-8000-000000000000'}]},null,2));
 console.log('Packaged Flutter client and phone-login Worker');

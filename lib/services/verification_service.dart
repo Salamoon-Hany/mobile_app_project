@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-
 import '../models/phone_number.dart';
 import 'phone_login_service.dart';
 
@@ -61,10 +60,25 @@ class VerificationService {
       }
       return;
     }
-    await _auth.signInWithEmailAndPassword(
-      email: normalizeEmail(email),
-      password: password,
-    );
+    final normalized = normalizeEmail(email);
+    final service = _phoneLogin ?? PhoneLoginService();
+    try {
+      final checked = _injectedAuth == null || _phoneLogin != null
+          ? await service.checkEmail(normalized, password)
+          : null;
+      final result = await _auth.signInWithEmailAndPassword(
+        email: normalized,
+        password: password,
+      );
+      if (checked != null && result.user?.uid != checked.uid) {
+        await _auth.signOut();
+        throw const FormatException(
+          'Email or mobile number and password are incorrect.',
+        );
+      }
+    } finally {
+      if (_phoneLogin == null) service.dispose();
+    }
   }
 
   Future<void> sendVerification() async {
@@ -86,7 +100,20 @@ class VerificationService {
   Future<void> signOut() => _auth.signOut();
 
   static String message(Object error) {
-    if (error is FormatException) return error.message;
+    if (error is FormatException) {
+      const safe = {
+        'Enter a valid email address.',
+        'Enter a valid phone number with country code.',
+        'Email or mobile number and password are incorrect.',
+        'Too many requests. Please wait before trying again.',
+        'Mobile login is temporarily unavailable. Sign in with your email or try again.',
+        'Sign in is temporarily unavailable. Please retry later.',
+        'A secure connection is required.',
+      };
+      return safe.contains(error.message)
+          ? error.message
+          : 'Could not complete this action. Please retry later.';
+    }
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'email-already-in-use':
@@ -106,34 +133,34 @@ class VerificationService {
           return 'Too many requests. Please wait before trying again.';
         case 'operation-not-allowed':
         case 'configuration-not-found':
-          return 'Enable Email/Password in Firebase Authentication first.';
+          return 'Sign in is temporarily unavailable. Please retry later.';
         case 'network-request-failed':
           return 'Check your internet connection and try again.';
         case 'admin-restricted-operation':
-          return 'Account creation is disabled in Firebase. Check Email/Password and the user signup settings.';
+          return 'Account creation is temporarily unavailable. Please retry later.';
         case 'invalid-api-key':
         case 'app-not-authorized':
-          return 'Firebase rejected this app configuration. Check the Web API key and its restrictions.';
+          return 'Sign in is temporarily unavailable. Please retry later.';
         case 'unauthorized-domain':
-          return 'Add this website domain to Firebase Authentication Authorized domains.';
+          return 'Sign in is temporarily unavailable. Please retry later.';
         case 'web-storage-unsupported':
           return 'Your browser is blocking account storage. Allow site storage or try another browser.';
       }
       // Share only the diagnostic code, never raw server messages, credentials,
       // or email addresses. This lets the project owner identify setup failures.
-      return 'Firebase could not finish (auth/${error.code}). Please share this code so the setup can be checked.';
+      return 'Could not complete this action. Please retry later.';
     }
     if (error is FirebaseException) {
       switch (error.code) {
         case 'permission-denied':
-          return 'Your email is verified, but the profile is blocked. Publish the project Firestore rules, then try again.';
+          return 'Could not load your account. Please retry later.';
         case 'unavailable':
           return 'The account database is unavailable. Check your connection and retry.';
         case 'not-found':
-          return 'Create the default Firestore database in Firebase, then try again.';
+          return 'Could not load your account. Please retry later.';
       }
-      return 'Firebase could not finish (${error.plugin}/${error.code}). Please share this code so the setup can be checked.';
+      return 'Could not complete this action. Please retry later.';
     }
-    return 'Verification could not finish (${error.runtimeType}). Try again and share this error label if it continues.';
+    return 'Could not complete this action. Please retry later.';
   }
 }
