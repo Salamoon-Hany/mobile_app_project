@@ -90,3 +90,9 @@ test('identity provider outages are not reported as a wrong password',async()=>{
  const response=await phone(req('/api/auth/login',{identifier:'test@example.invalid',password:'isolated'}));assert.equal(response.status,503);assert.equal((await response.json()).error,'TEMPORARILY_UNAVAILABLE');
  const apiHandler=createMarketplaceHandler({repository:repo,apiKey:'isolated',fetchImpl:async()=>new Response('private provider details',{status:503})});assert.equal((await apiHandler(api('/snapshot'))).status,503);sql.close();
 });
+
+import worker from '../index.js';
+test('the HTML shell is served by the Worker with headers even when ASSETS would omit them',async()=>{
+ let assetCalls=0;const env={ASSETS:{fetch:async()=>{assetCalls++;return new Response('unprotected asset');}}};
+ for(const path of ['/','/index.html']){const r=await worker.fetch(req(path),env);assert.equal(r.status,200);assert.match(await r.text(),/SANAD/);assert.match(r.headers.get('Content-Security-Policy'),/object-src 'none'/);assert.equal(r.headers.get('Cache-Control'),'private, no-cache');}assert.equal(assetCalls,0);
+});

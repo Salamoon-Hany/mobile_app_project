@@ -8,6 +8,11 @@ fs.rmSync('dist',{recursive:true,force:true});
 fs.mkdirSync('dist/server',{recursive:true});
 fs.mkdirSync('dist/.openai',{recursive:true});
 fs.cpSync(web,'dist/client',{recursive:true});
+const shell=fs.readFileSync(path.join(web,'index.html'),'utf8');
+fs.writeFileSync('dist/server/app-shell.mjs','export const appShell='+JSON.stringify(shell)+';\n');
+// Do not let the asset router bypass document security headers.
+fs.rmSync('dist/client/index.html');
+fs.copyFileSync('web/_headers','dist/client/_headers');
 fs.copyFileSync('worker/marketplace.mjs','dist/server/marketplace.mjs');
 fs.copyFileSync('worker/service-experience.mjs','dist/server/service-experience.mjs');
 fs.copyFileSync('worker/index.js','dist/server/index.js');

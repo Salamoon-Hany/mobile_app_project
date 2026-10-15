@@ -1,9 +1,14 @@
+import {appShell} from './app-shell.mjs';
 import {createMarketplaceHandler, MarketplaceRepository} from './marketplace.mjs';
 import {createPhoneHandler, PhoneRepository} from './phone-auth.mjs';
 import {perimeter} from './security.mjs';
 
 const handlers=new WeakMap();
 async function route(request, env) {
+    const url=new URL(request.url);
+    // Sites serves matching assets ahead of the Worker. Keep HTML out of the
+    // asset namespace so the document always receives the security boundary.
+    if(url.pathname==='/'||url.pathname==='/index.html')return new Response(request.method==='HEAD'?null:appShell,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-cache'}});
     if (new URL(request.url).pathname.startsWith('/api/')&&!env.DB) return Response.json({error:'TEMPORARILY_UNAVAILABLE'},{status:503});
     let saved=env.DB?handlers.get(env.DB):null;
     const signature=(env.ADMIN_EMAILS??'')+'|'+(env.DEMO_FUNDS_ENABLED??'');
@@ -19,6 +24,8 @@ async function route(request, env) {
       return saved.phone(request);
     }
     if(new URL(request.url).pathname.startsWith('/api/'))return Response.json({error:'NOT_FOUND'},{status:404});
-    return env.ASSETS.fetch(request);
+    const asset=await env.ASSETS.fetch(request);
+    if(asset.status===404&&(request.headers.get('Accept')?.includes('text/html')||request.headers.get('Sec-Fetch-Mode')==='navigate'))return new Response(request.method==='HEAD'?null:appShell,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-cache'}});
+    return asset;
 }
 export default {fetch:(request,env)=>perimeter(request,env,route)};
