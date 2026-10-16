@@ -20,7 +20,7 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter test
       - name: Test Sanad Web launch
-        run: node --test test/sanad_web_launch_test.mjs
+        run: node --test test/sanad_web_launch_test.mjs test/firebase_bootstrap_test.mjs
       - run: flutter build web --release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
