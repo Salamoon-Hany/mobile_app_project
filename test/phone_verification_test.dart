@@ -13,8 +13,11 @@ import 'verification_screen_test.dart' show FakeUser, FakeAuth, FakeCredential;
 class PhoneUser extends FakeUser {
   @override
   String get uid => 'email-account';
+  String? _phoneNumber;
   @override
-  String? phoneNumber;
+  String? get phoneNumber => _phoneNumber;
+  @override
+  set phoneNumber(String? value) => _phoneNumber = value;
   final challenge = FakeConfirmation();
   int requests = 0;
   @override
@@ -36,8 +39,9 @@ class FakeConfirmation implements ConfirmationResult {
   @override
   Future<UserCredential> confirm(String code) async {
     attempts++;
-    if (code != '654321')
+    if (code != '654321') {
       throw FirebaseAuthException(code: 'invalid-verification-code');
+    }
     user.phoneNumber = phone;
     return FakeCredential(user);
   }
@@ -59,8 +63,9 @@ class ScreenService extends PhoneVerificationService {
   @override
   Future<void> confirm(String input) async {
     confirms++;
-    if (input != '654321')
+    if (input != '654321') {
       throw FirebaseAuthException(code: 'invalid-verification-code');
+    }
   }
 
   @override

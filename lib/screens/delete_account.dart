@@ -34,8 +34,9 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     AccountService.deletionInProgress = true;
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null || user.email == null)
+      if (user == null || user.email == null) {
         throw const FormatException('Sign in again to continue.');
+      }
       final uid = user.uid;
       await user.reauthenticateWithCredential(
         EmailAuthProvider.credential(
@@ -74,13 +75,14 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       await LocalAccountStore.erase(uid);
       await FirebaseAuth.instance.signOut();
       AccountService.deletionInProgress = false;
-      if (mounted)
+      if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const AuthGate()),
           (_) => false,
         );
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
@@ -88,6 +90,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
               ? 'Check your password and connection, then retry.'
               : 'Could not delete your account. Check your connection and retry.',
         );
+      }
     } finally {
       AccountService.deletionInProgress = false;
       if (mounted) setState(() => _busy = false);

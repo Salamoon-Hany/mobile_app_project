@@ -2,8 +2,9 @@
 import 'dart:html' as html;
 
 Future<String> enableAlerts() async {
-  if (!html.Notification.supported)
+  if (!html.Notification.supported) {
     return 'Alerts are unavailable on this device.';
+  }
   try {
     final p = await html.Notification.requestPermission();
     return p == 'granted'

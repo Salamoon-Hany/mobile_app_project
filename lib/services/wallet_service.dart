@@ -83,14 +83,16 @@ class WalletService {
             .timeout(const Duration(seconds: 25));
     _sameUser(user);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      if (response.statusCode == 401 || response.statusCode == 403)
+      if (response.statusCode == 401 || response.statusCode == 403) {
         throw const FormatException(
           'Please log in again with a verified email.',
         );
-      if (response.statusCode == 503)
+      }
+      if (response.statusCode == 503) {
         throw const FormatException(
           'Payments are not configured yet. Your balance has not changed.',
         );
+      }
       throw const FormatException(
         'The payment could not complete. Your balance has not changed. Retry checking its status.',
       );

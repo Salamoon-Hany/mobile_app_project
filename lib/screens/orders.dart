@@ -243,12 +243,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   );
                 } catch (_) {
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: AppText('Could not load the photo. Retry.'),
                       ),
                     );
+                  }
                 }
               },
               child: const AppText('View Picture'),
@@ -315,7 +316,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 try {
                   await Marketplace.shared.decide(order.id, action);
                 } catch (e) {
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: AppText(
@@ -325,6 +326,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                     );
+                  }
                 }
               },
               child: AppText(

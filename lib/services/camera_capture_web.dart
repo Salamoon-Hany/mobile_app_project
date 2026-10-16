@@ -42,8 +42,9 @@ class _CameraState extends State<_Camera> {
 
   Future<void> _open() async {
     try {
-      if (html.window.navigator.mediaDevices == null)
+      if (html.window.navigator.mediaDevices == null) {
         throw StateError('unsupported');
+      }
       final stream = await html.window.navigator.mediaDevices!.getUserMedia({
         'video': {
           'facingMode': 'user',
@@ -63,12 +64,13 @@ class _CameraState extends State<_Camera> {
       await _video.play();
       if (mounted) setState(() => _ready = true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e.toString().contains('NotAllowed')
               ? 'Camera permission was denied. Allow camera access or upload a photo.'
               : 'Camera is unavailable. Use Upload photo instead.',
         );
+      }
     }
   }
 

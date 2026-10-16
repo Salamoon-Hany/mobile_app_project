@@ -14,15 +14,17 @@ Uri secureEndpoint(Uri uri) {
 }
 
 Map<String, dynamic> decodeApiObject(String body, {int maximum = 4000000}) {
-  if (body.length > maximum)
+  if (body.length > maximum) {
     throw const FormatException(
       'The service response is invalid. Please retry.',
     );
+  }
   final data = jsonDecode(body);
-  if (data is! Map<String, dynamic>)
+  if (data is! Map<String, dynamic>) {
     throw const FormatException(
       'The service response is invalid. Please retry.',
     );
+  }
   int nodes = 0;
   void validate(dynamic value, int depth) {
     if (++nodes > 80000 || depth > 16 || (value is num && !value.isFinite)) {
@@ -31,10 +33,11 @@ Map<String, dynamic> decodeApiObject(String body, {int maximum = 4000000}) {
       );
     }
     if (value is List) {
-      if (value.length > 3000)
+      if (value.length > 3000) {
         throw const FormatException(
           'The service response is invalid. Please retry.',
         );
+      }
       for (final item in value) {
         validate(item, depth + 1);
       }

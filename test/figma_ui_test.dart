@@ -33,7 +33,7 @@ Future<void> capture(WidgetTester t, String name) async {
     final dir = Directory('../../sanad-ui-qa');
     await dir.create(recursive: true);
     await File(
-      dir.path + '/' + name + '.png',
+      '${dir.path}/$name.png',
     ).writeAsBytes(bytes!.buffer.asUint8List());
     picture.dispose();
   });

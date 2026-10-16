@@ -25,8 +25,9 @@ Future<String?> pickServicePhoto() async {
   );
   if (f == null) return null;
   final b = await f.readAsBytes();
-  if (b.length > 220000)
+  if (b.length > 220000) {
     throw const FormatException('Choose a smaller photo (up to 200 KB).');
+  }
   return Marketplace.photoData(b);
 }
 
@@ -56,10 +57,11 @@ Future<void> showServicePhoto(
       ),
     );
   } catch (e) {
-    if (context.mounted)
+    if (context.mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: AppText(friendlyError(e))));
+    }
   }
 }
 
@@ -141,11 +143,12 @@ class _OrderActivityScreenState extends State<OrderActivityScreen> {
       final d = await Marketplace.shared.request(
         'orders/${widget.orderId}/experience',
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _data = d;
           _error = null;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
     } finally {
@@ -168,7 +171,7 @@ class _OrderActivityScreenState extends State<OrderActivityScreen> {
         'orders/${widget.orderId}/$action',
         body: body,
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _data = d;
           _error = null;
@@ -181,6 +184,7 @@ class _OrderActivityScreenState extends State<OrderActivityScreen> {
             _costNote.clear();
           }
         });
+      }
       await Marketplace.shared.refresh();
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
@@ -192,11 +196,12 @@ class _OrderActivityScreenState extends State<OrderActivityScreen> {
   Future<void> _attach() async {
     try {
       final p = await pickServicePhoto();
-      if (p != null && mounted)
+      if (p != null && mounted) {
         setState(() {
           _photo = p;
           _ids.clear();
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
     }
@@ -456,8 +461,9 @@ class _OrderActivityScreenState extends State<OrderActivityScreen> {
                                                               ),
                                                             );
                                                             if (confirmed !=
-                                                                true)
+                                                                true) {
                                                               return;
+                                                            }
                                                             await _send(
                                                               'extras/${e['id']}',
                                                               {
@@ -697,7 +703,7 @@ class _WorkerReviewsState extends State<WorkerReviewsScreen> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _future,
         builder: (c, s) {
-          if (s.hasError)
+          if (s.hasError) {
             return Center(
               child: TextButton(
                 onPressed: () => setState(
@@ -708,8 +714,10 @@ class _WorkerReviewsState extends State<WorkerReviewsScreen> {
                 child: const AppText('Retry'),
               ),
             );
-          if (!s.hasData)
+          }
+          if (!s.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final rows = s.data!['reviews'] as List;
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -982,10 +990,11 @@ class ActivityScreen extends StatelessWidget {
                 subtitle: const AppText('Receive alerts while SANAD is open.'),
                 onTap: () async {
                   final result = await alerts.enableAlerts();
-                  if (context.mounted)
+                  if (context.mounted) {
                     ScaffoldMessenger.of(
                       context,
                     ).showSnackBar(SnackBar(content: AppText(result)));
+                  }
                 },
               ),
               if (m.error != null) AppText(m.error!),
@@ -1035,10 +1044,11 @@ class ActivityScreen extends StatelessWidget {
                           ),
                         );
                       } catch (e) {
-                        if (context.mounted)
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: AppText(friendlyError(e))),
                           );
+                        }
                       }
                     },
                   ),
@@ -1071,11 +1081,12 @@ class _AdminState extends State<AdminScreen> {
   Future<void> _load() async {
     try {
       final d = await Marketplace.shared.request('admin');
-      if (mounted)
+      if (mounted) {
         setState(() {
           _data = d;
           _error = null;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
     }

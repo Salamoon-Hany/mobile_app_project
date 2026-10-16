@@ -23,10 +23,12 @@ String egp(int piasters) => AppLanguage.isArabic
 
 class DepositQuote {
   DepositQuote(this.amountPiasters) {
-    if (amountPiasters < 1000)
+    if (amountPiasters < 1000) {
       throw const FormatException('Minimum deposit is 10 pounds.');
-    if (amountPiasters > 100000000)
+    }
+    if (amountPiasters > 100000000) {
       throw const FormatException('Maximum deposit is 1,000,000 pounds.');
+    }
   }
   factory DepositQuote.parse(String input) {
     var text = input.trim();
@@ -96,8 +98,9 @@ class WalletState extends ChangeNotifier {
   };
   void restoreSnapshot(Map<String, dynamic> data) {
     final balance = data['balance'];
-    if (balance is! int || balance < 0)
+    if (balance is! int || balance < 0) {
       throw const FormatException('Invalid saved balance.');
+    }
     final receipts = <String, DepositReceipt>{};
     for (final value in data['receipts'] as List? ?? []) {
       final row = Map<String, dynamic>.from(value as Map);
@@ -138,8 +141,9 @@ class WalletState extends ChangeNotifier {
   }
 
   DepositReceipt creditDemo(String uid, DepositReceipt receipt) {
-    if (ownerUid != uid || !receipt.demo)
+    if (ownerUid != uid || !receipt.demo) {
       throw const FormatException('Your account changed. Please log in again.');
+    }
     if (_receipts.containsKey(receipt.id)) {
       final previous = _receipts[receipt.id]!;
       if (previous.quote.amountPiasters != receipt.quote.amountPiasters ||

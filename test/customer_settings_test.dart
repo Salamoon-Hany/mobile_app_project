@@ -25,8 +25,9 @@ void main() {
       expect(parseExperienceYears('0'), 0);
       expect(parseExperienceYears(' ٥ '), 5);
       expect(parseExperienceYears('۶۰'), 60);
-      for (final value in ['', '-1', '61', '3.5', 'text'])
+      for (final value in ['', '-1', '61', '3.5', 'text']) {
         expect(parseExperienceYears(value), null);
+      }
     },
   );
   testWidgets(
@@ -235,8 +236,9 @@ void main() {
       ),
     );
     expect(find.text('قيّم التطبيق'), findsOneWidget);
-    for (var i = 1; i <= 5; i++)
+    for (var i = 1; i <= 5; i++) {
       expect(find.byKey(Key('app-rating-$i')), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   });
 }

@@ -150,8 +150,9 @@ class _PlaceOrderScreenState extends State<PlaceOrderScreen> {
       );
       if (!mounted || image == null) return;
       final bytes = await image.readAsBytes();
-      if (bytes.length > 220000)
+      if (bytes.length > 220000) {
         throw const FormatException('Choose a smaller photo (up to 200 KB).');
+      }
       if (!mounted) return;
       BookingState.photoBytes = bytes;
       setState(() {
@@ -602,15 +603,17 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
       final navigator = Navigator.of(context);
       navigator.pop();
       navigator.pop();
-      if (_quote)
+      if (_quote) {
         navigator.push(MaterialPageRoute(builder: (_) => const QuotesScreen()));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not sync your account. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -635,9 +638,10 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _workers,
               builder: (c, s) {
-                if (s.connectionState != ConnectionState.done)
+                if (s.connectionState != ConnectionState.done) {
                   return const Center(child: CircularProgressIndicator());
-                if (s.hasError)
+                }
+                if (s.hasError) {
                   return Column(
                     children: [
                       const AppText(
@@ -649,7 +653,8 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       ),
                     ],
                   );
-                if (s.data!.isEmpty)
+                }
+                if (s.data!.isEmpty) {
                   return Column(
                     children: [
                       const Icon(Icons.person_search, size: 56),
@@ -663,6 +668,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       ),
                     ],
                   );
+                }
                 return Column(
                   children: [
                     for (final w in s.data!)
@@ -687,12 +693,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                               Text(
                                 (w['review_count'] as int? ?? 0) == 0
                                     ? tr('No reviews yet')
-                                    : '★ ' +
-                                          (w['rating'] as num).toStringAsFixed(
+                                    : '★ ${(w['rating'] as num).toStringAsFixed(
                                             1,
-                                          ) +
-                                          ' / 5 • ' +
-                                          (w['jobs_completed'] ?? 0).toString(),
+                                          )} / 5 • ${w['jobs_completed'] ?? 0}',
                               ),
                               TextButton(
                                 onPressed: () => Navigator.push(

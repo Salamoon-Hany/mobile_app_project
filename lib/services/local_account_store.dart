@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/dashboard.dart';
 import '../models/wallet.dart';
-import '../models/booking.dart';
 import '../models/selected_location.dart';
 import 'account_service.dart';
 
@@ -30,8 +29,9 @@ class LocalAccountStore {
   static void restore(String uid) {
     if (_preferences == null ||
         WalletServiceBackend.enabled ||
-        _preferences!.getBool('sanad.cloud.migrated.$uid') == true)
+        _preferences!.getBool('sanad.cloud.migrated.$uid') == true) {
       return;
+    }
     final raw = _preferences!.getString(_key(uid));
     if (raw == null) return;
     _restoredRecords.add(uid);
@@ -90,8 +90,9 @@ class LocalAccountStore {
         uid == null ||
         WalletState.shared.ownerUid != uid ||
         WalletServiceBackend.enabled ||
-        _cloudBacked.contains(uid))
+        _cloudBacked.contains(uid)) {
       return;
+    }
     final snapshot = jsonEncode({
       'version': 1,
       'uid': uid,
@@ -124,8 +125,9 @@ class LocalAccountStore {
     // Capture UID and bytes now so late writes cannot overwrite another account.
     _pending = _pending.then((_) async {
       try {
-        if (!await _preferences!.setString(_key(uid), snapshot))
+        if (!await _preferences!.setString(_key(uid), snapshot)) {
           throw StateError('Storage rejected the write');
+        }
         _lastError = null;
       } catch (error) {
         _lastError = error;
@@ -158,10 +160,11 @@ class LocalAccountStore {
 
   static Future<void> flush() async {
     await _pending;
-    if (_lastError != null)
+    if (_lastError != null) {
       throw const FormatException(
         'Could not save your account data on this device. Please retry.',
       );
+    }
   }
 }
 

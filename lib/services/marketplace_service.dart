@@ -66,12 +66,14 @@ class Marketplace extends ChangeNotifier {
     String? nationalId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setString('sanad.signup.role.$uid', role))
+    if (!await prefs.setString('sanad.signup.role.$uid', role)) {
       throw const FormatException('Could not save your account. Please retry.');
+    }
     if (!enabled) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.uid != uid)
+    if (user == null || user.uid != uid) {
       throw const FormatException('Sign in again to continue.');
+    }
     final token = await user.getIdToken();
     final base = const String.fromEnvironment('MARKETPLACE_API_URL');
     final response = await http
@@ -93,8 +95,9 @@ class Marketplace extends ChangeNotifier {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200)
+    if (response.statusCode != 200) {
       throw const FormatException('Could not save your account. Please retry.');
+    }
   }
 
   Future<void> _queue = Future.value();
@@ -105,10 +108,11 @@ class Marketplace extends ChangeNotifier {
     if (testTransport != null) return testTransport!(path, body);
     final generation = _generation;
     final future = _queue.then((_) {
-      if (generation != _generation)
+      if (generation != _generation) {
         throw const FormatException(
           'Your account changed. Please log in again.',
         );
+      }
       return _request(path, body: body);
     });
     _queue = future.then<void>((_) {}, onError: (Object _, StackTrace __) {});
@@ -120,8 +124,9 @@ class Marketplace extends ChangeNotifier {
     Map<String, dynamic>? body,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || !user.emailVerified || user.uid != _uid)
+    if (user == null || !user.emailVerified || user.uid != _uid) {
       throw const FormatException('Sign in again to continue.');
+    }
     final uid = user.uid,
         generation = _generation,
         token = await user.getIdToken();
@@ -141,8 +146,9 @@ class Marketplace extends ChangeNotifier {
             .timeout(const Duration(seconds: 20));
     if (_uid != uid ||
         _generation != generation ||
-        FirebaseAuth.instance.currentUser?.uid != uid)
+        FirebaseAuth.instance.currentUser?.uid != uid) {
       throw const FormatException('Your account changed. Please log in again.');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final code = decodeApiObject(response.body)['error'];
       throw FormatException(switch (code) {
@@ -276,8 +282,9 @@ class Marketplace extends ChangeNotifier {
         .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();
     for (final n in notices) {
-      if (_noticesReady && !_seenNotices.contains(n['id']) && n['read'] != true)
+      if (_noticesReady && !_seenNotices.contains(n['id']) && n['read'] != true) {
         alerts.showAlert(tr('SANAD update'), tr(n['body'] as String));
+      }
       _seenNotices.add(n['id'] as String);
     }
     _noticesReady = true;

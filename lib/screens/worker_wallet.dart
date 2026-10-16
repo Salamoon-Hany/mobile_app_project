@@ -44,14 +44,15 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
     }
     String destination = _destination.text.trim();
     try {
-      if (_method == 'mobile_wallet')
+      if (_method == 'mobile_wallet') {
         destination = normalizePhone(destination);
-      else if (!RegExp(
+      } else if (!RegExp(
         r'^[A-Za-z0-9._-]{3,80}@instapay$',
-      ).hasMatch(destination))
+      ).hasMatch(destination)) {
         throw const FormatException(
           'Enter a valid InstaPay address ending in @instapay.',
         );
+      }
     } on FormatException catch (e) {
       setState(() => _error = e.message);
       return;
@@ -110,7 +111,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
         'method': _method,
         'destination': destination,
       });
-      if (mounted)
+      if (mounted) {
         setState(() {
           _notice = 'Withdrawal request submitted';
           _amount.clear();
@@ -118,13 +119,15 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
           _requestId = null;
           _payload = null;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not submit your withdrawal. Please retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -161,12 +164,13 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
     try {
       await Marketplace.shared.cancelWithdrawal(id);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not sync your account. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -242,7 +246,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _method,
+                      initialValue: _method,
                       decoration: InputDecoration(
                         labelText: tr('Withdrawal method'),
                         border: const OutlineInputBorder(),
@@ -383,7 +387,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                                 ),
                               ),
                               Text(
-                                '+' + egp(o['amount'] as int),
+                                '+${egp(o['amount'] as int)}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF187B34),

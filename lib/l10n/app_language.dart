@@ -17,10 +17,11 @@ class AppLanguage {
   static Future<void> select(String value) async {
     if (value != 'ar' && value != 'en') return;
     final ok = await _preferences?.setString('sanad.language.v1', value);
-    if (ok == false)
+    if (ok == false) {
       throw const FormatException(
         'Could not save your language preference. Please retry.',
       );
+    }
     code.value = value;
   }
 

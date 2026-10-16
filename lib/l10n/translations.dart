@@ -756,8 +756,9 @@ String translateText(String text, String language) {
   }
   if (text.contains(', ')) {
     final parts = text.split(', ');
-    if (parts.every(arabicStrings.containsKey))
+    if (parts.every(arabicStrings.containsKey)) {
       return parts.map((p) => arabicStrings[p]!).join('، ');
+    }
   }
   return text;
 }

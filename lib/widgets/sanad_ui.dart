@@ -51,7 +51,7 @@ class ReferenceIcon extends StatelessWidget {
             width: size.width,
             height: size.height,
             child: SvgPicture.asset(
-              'assets/figma/' + name + '.svg',
+              'assets/figma/$name.svg',
               colorFilter: ColorFilter.mode(
                 color ??
                     (muted ? SanadUi.muted(context) : SanadUi.text(context)),

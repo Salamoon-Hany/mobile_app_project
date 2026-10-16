@@ -85,8 +85,9 @@ class BecomeWorkerScreen extends StatelessWidget {
                           ),
                         ),
                       );
-                      if (saved == true && context.mounted)
+                      if (saved == true && context.mounted) {
                         Navigator.pop(context);
+                      }
                     },
                     style: _actionStyle(context),
                     child: AppText(
@@ -304,7 +305,7 @@ class _WorkerApplicationScreenState extends State<WorkerApplicationScreen> {
         );
       },
     );
-    if (selected != null && mounted)
+    if (selected != null && mounted) {
       setState(() {
         if (country) {
           _countries = selected;
@@ -312,6 +313,7 @@ class _WorkerApplicationScreenState extends State<WorkerApplicationScreen> {
           _types = selected;
         }
       });
+    }
   }
 
   Widget _selection({required bool country}) {
@@ -372,8 +374,9 @@ class _WorkerApplicationScreenState extends State<WorkerApplicationScreen> {
         _types.isEmpty ||
         _countries.isEmpty ||
         _busy ||
-        _locked)
+        _locked) {
       return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -444,12 +447,13 @@ class _WorkerApplicationScreenState extends State<WorkerApplicationScreen> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not save your application. Please retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

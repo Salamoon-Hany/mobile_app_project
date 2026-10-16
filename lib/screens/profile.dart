@@ -45,8 +45,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       if (kIsWeb && source == ImageSource.camera) {
         final bytes = await captureCamera(context);
-        if (bytes != null && mounted)
+        if (bytes != null && mounted) {
           setState(() => _profileImageBytes = bytes);
+        }
         return;
       }
       final image = await _picker.pickImage(
@@ -190,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _saving = true);
     try {
-      if (Marketplace.enabled)
+      if (Marketplace.enabled) {
         await Marketplace.shared.saveProfile(
           name: _nameController.text.trim(),
           phone: phone,
@@ -203,6 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? normalizeNationalId(_nationalId.text)
               : null,
         );
+      }
       await AccountService.saveProfile(
         name: _nameController.text,
         gender: _selectedGender ?? '',
@@ -218,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ).showSnackBar(const SnackBar(content: AppText('Profile saved')));
       Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: AppText(
@@ -228,6 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -282,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       if (mounted) setState(() {});
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: AppText(
@@ -290,6 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         );
+      }
     }
   }
 
@@ -502,7 +506,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
-                    value: _selectedGender,
+                    initialValue: _selectedGender,
                     decoration: InputDecoration(
                       labelText: tr('Gender'),
                       filled: true,

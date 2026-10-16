@@ -57,12 +57,13 @@ class _WorkerHomeState extends State<WorkerHome> {
       );
       if (ok == true && mounted) await Marketplace.shared.decide(id, action);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _notice = e is FormatException
               ? e.message
               : 'Could not sync your account. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy.remove(id));
     }
@@ -117,12 +118,13 @@ class _WorkerHomeState extends State<WorkerHome> {
         skills: selected.toList(),
       );
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _notice = e is FormatException
               ? e.message
               : 'Could not sync your account. Check your connection and retry.',
         );
+      }
     }
   }
 
@@ -167,11 +169,12 @@ class _WorkerHomeState extends State<WorkerHome> {
         );
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _notice =
               'Could not sync your account. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _availabilityBusy = false);
     }
@@ -453,7 +456,7 @@ class _WorkerHomeState extends State<WorkerHome> {
                   child: Padding(
                     padding: EdgeInsetsDirectional.only(end: i < 2 ? 6 : 0),
                     child: TextButton(
-                      key: Key('worker-filter-' + i.toString()),
+                      key: Key('worker-filter-$i'),
                       onPressed: () => setState(() => _filter = i),
                       style: TextButton.styleFrom(
                         backgroundColor: _filter == i
@@ -473,13 +476,10 @@ class _WorkerHomeState extends State<WorkerHome> {
                       child: Text(
                         i == 2
                             ? tr('History')
-                            : tr(i == 0 ? 'Pending' : 'Active') +
-                                  ' (' +
-                                  [
+                            : '${tr(i == 0 ? 'Pending' : 'Active')} (${[
                                     pending.length,
                                     active.length,
-                                  ][i].toString() +
-                                  ')',
+                                  ][i]})',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -734,15 +734,7 @@ String requestTime(Map<String, dynamic> o) {
   final d = DateTime.fromMillisecondsSinceEpoch(
     o['created_at'] as int,
   ).toLocal();
-  return d.day.toString() +
-      '/' +
-      d.month.toString() +
-      '/' +
-      d.year.toString() +
-      '  ' +
-      d.hour.toString().padLeft(2, '0') +
-      ':' +
-      d.minute.toString().padLeft(2, '0');
+  return '${d.day}/${d.month}/${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }
 
 class WorkerRequestCard extends StatelessWidget {
@@ -886,7 +878,7 @@ class WorkerRequestCard extends StatelessWidget {
               ],
             ),
           TextButton(
-            key: Key('request-' + (o['id'] as String)),
+            key: Key('request-${o['id'] as String}'),
             onPressed: onDetails,
             child: const AppText('View details'),
           ),
@@ -910,8 +902,9 @@ class _WorkerRequestScreenState extends State<WorkerRequestScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.order['photo'] != null)
+    if (widget.order['photo'] != null) {
       _photo = Marketplace.photoBytes(widget.order['photo'] as String);
+    }
   }
 
   Future<void> _decision(String action) async {
@@ -939,12 +932,13 @@ class _WorkerRequestScreenState extends State<WorkerRequestScreen> {
       if (ok != true) return;
       await Marketplace.shared.decide(widget.order['id'] as String, action);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not sync your account. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -967,11 +961,12 @@ class _WorkerRequestScreenState extends State<WorkerRequestScreen> {
   Future<void> _map(Map loc) async {
     final uri = Uri.https('www.google.com', '/maps/search/', {
       'api': '1',
-      'query': loc['latitude'].toString() + ',' + loc['longitude'].toString(),
+      'query': '${loc['latitude']},${loc['longitude']}',
     });
     try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication))
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         throw const FormatException();
+      }
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not open the map.');
     }
@@ -1128,9 +1123,7 @@ class _WorkerRequestScreenState extends State<WorkerRequestScreen> {
                             ),
                             const SizedBox(height: 8),
                             SelectableText(
-                              loc['latitude'].toString() +
-                                  ', ' +
-                                  loc['longitude'].toString(),
+                              '${loc['latitude']}, ${loc['longitude']}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: SanadUi.muted(context),

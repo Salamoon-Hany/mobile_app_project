@@ -67,12 +67,13 @@ class _AppRatingSheetState extends State<AppRatingSheet> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : 'Could not save your rating. Please retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

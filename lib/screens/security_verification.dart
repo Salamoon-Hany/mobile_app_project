@@ -8,7 +8,6 @@ import '../services/account_service.dart';
 import '../services/marketplace_service.dart';
 import '../services/verification_service.dart';
 import 'auth_gate.dart';
-import '../models/phone_number.dart';
 import '../models/profile_completion.dart';
 import '../services/phone_verification_service.dart';
 
@@ -105,7 +104,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
       if (_signup) {
         await _service.signUp(_email.text, _password.text, _name.text);
         final uid = _service.currentUser?.uid;
-        if (uid != null)
+        if (uid != null) {
           await Marketplace.rememberRole(
             uid,
             _role,
@@ -117,6 +116,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 ? normalizeNationalId(_nationalId.text)
                 : null,
           );
+        }
       } else {
         await _service.logIn(_email.text, _password.text);
       }
@@ -135,11 +135,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         await _send();
       }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _pending = _service.currentUser != null;
           _error = VerificationService.message(error);
         });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -190,11 +191,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     });
     try {
       await _service.resetPassword(_email.text);
-      if (mounted)
+      if (mounted) {
         setState(
           () => _notice =
               'If an account exists for this email, a password reset link has been sent. Check inbox and spam.',
         );
+      }
     } catch (error) {
       if (mounted) setState(() => _error = VerificationService.message(error));
     } finally {
@@ -207,7 +209,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     try {
       await _service.signOut();
       _timer?.cancel();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _pending = false;
           _busy = false;
@@ -215,12 +217,14 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
           _error = null;
           _notice = null;
         });
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _error = VerificationService.message(error);
         });
+      }
     }
   }
 

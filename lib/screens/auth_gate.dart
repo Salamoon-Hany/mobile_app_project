@@ -90,8 +90,9 @@ class _AuthGateState extends State<AuthGate> {
       (snapshot) async {
         if (!mounted ||
             generation != _generation ||
-            AccountService.deletionInProgress)
+            AccountService.deletionInProgress) {
           return;
+        }
         final data = snapshot.data();
         final registered = data != null && data['uid'] == user.uid;
         if (registered) {
@@ -100,8 +101,9 @@ class _AuthGateState extends State<AuthGate> {
             try {
               await Marketplace.shared.attach(user);
             } catch (e) {
-              if (generation == _generation)
+              if (generation == _generation) {
                 _fail(e is FormatException ? e.message : null);
+              }
               return;
             }
             if (!mounted || generation != _generation) return;

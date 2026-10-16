@@ -53,18 +53,21 @@ class PhoneLoginService {
           body: jsonEncode(data),
         )
         .timeout(const Duration(seconds: 25));
-    if (response.statusCode == 429)
+    if (response.statusCode == 429) {
       throw const FormatException(
         'Too many requests. Please wait before trying again.',
       );
-    if (response.statusCode == 400 || response.statusCode == 401)
+    }
+    if (response.statusCode == 400 || response.statusCode == 401) {
       throw const FormatException(
         'Email or mobile number and password are incorrect.',
       );
-    if (response.statusCode != 200)
+    }
+    if (response.statusCode != 200) {
       throw const FormatException(
         'Mobile login is temporarily unavailable. Sign in with your email or try again.',
       );
+    }
     return decodeApiObject(response.body, maximum: 8192);
   }
 
@@ -90,10 +93,11 @@ class PhoneLoginService {
       'phone': normalizePhone(phone),
       'password': password,
     });
-    if (data['uid'] is! String || data['email'] is! String)
+    if (data['uid'] is! String || data['email'] is! String) {
       throw const FormatException(
         'Mobile login is temporarily unavailable. Sign in with your email or try again.',
       );
+    }
     return PhoneLoginAccount(data['uid'] as String, data['email'] as String);
   }
 
@@ -102,8 +106,9 @@ class PhoneLoginService {
     if (user == null ||
         !user.emailVerified ||
         user.isAnonymous ||
-        (user.phoneNumber ?? '').isEmpty)
+        (user.phoneNumber ?? '').isEmpty) {
       return;
+    }
     final token = await user.getIdToken();
     if (token == null) return;
     await _post('register', {}, token: token);

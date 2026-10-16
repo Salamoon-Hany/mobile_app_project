@@ -8,7 +8,6 @@ import '../services/phone_login_service.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/verification_service.dart';
@@ -459,17 +458,21 @@ class _MyHomePageState extends State<MyHomePage> {
       builder: (context) => SimpleDialog(
         title: const AppText('Language'),
         children: [
-          RadioListTile<String>(
-            value: 'ar',
+          RadioGroup<String>(
             groupValue: AppLanguage.code.value,
-            title: const Text('العربية'),
             onChanged: (value) => Navigator.pop(context, value),
-          ),
-          RadioListTile<String>(
-            value: 'en',
-            groupValue: AppLanguage.code.value,
-            title: const Text('English'),
-            onChanged: (value) => Navigator.pop(context, value),
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  value: 'ar',
+                  title: const Text('العربية'),
+                ),
+                RadioListTile<String>(
+                  value: 'en',
+                  title: const Text('English'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -478,10 +481,11 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await AppLanguage.select(selected);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: AppText(VerificationService.message(error))),
         );
+      }
     }
   }
 
@@ -570,12 +574,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
               onTap: () async {
                 final saved = await showAppRating(context);
-                if (saved == true && mounted)
+                if (saved == true && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: AppText('Thanks for your feedback!'),
                     ),
                   );
+                }
               },
             ),
           ],
@@ -592,8 +597,9 @@ class _MyHomePageState extends State<MyHomePage> {
           // Logout option
           InkWell(
             onTap: () async {
-              if (VerificationService.configured)
+              if (VerificationService.configured) {
                 await FirebaseAuth.instance.signOut();
+              }
               AppState.clearAccount();
               if (!mounted) return;
               Navigator.pushAndRemoveUntil(

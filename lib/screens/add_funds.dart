@@ -42,11 +42,12 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
     try {
       await _service.refresh();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error =
               'Could not load your balance. Check the payment service and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -109,19 +110,21 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
     ).join();
     try {
       final session = await _service.begin(quote, _method!, _requestId!);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _quote = quote;
           _session = session;
           _receipt = session.receipt;
         });
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = error is FormatException
               ? error.message
               : 'Could not start the deposit. Check your connection and retry.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -149,12 +152,13 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
         }
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = error is FormatException
               ? error.message
               : 'Could not check payment status. Retry before starting another deposit.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

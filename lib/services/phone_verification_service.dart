@@ -119,8 +119,9 @@ class PhoneVerificationService {
               try {
                 _checkOwner(owner, generation);
                 _verificationId = id;
-                if (!ready.isCompleted && !automaticLinkInProgress)
+                if (!ready.isCompleted && !automaticLinkInProgress) {
                   ready.complete(false);
+                }
               } catch (error) {
                 fail(error);
               }
@@ -129,8 +130,9 @@ class PhoneVerificationService {
               try {
                 _checkOwner(owner, generation);
                 _verificationId = id;
-                if (!ready.isCompleted && !automaticLinkInProgress)
+                if (!ready.isCompleted && !automaticLinkInProgress) {
                   ready.complete(false);
+                }
               } catch (error) {
                 fail(error);
               }

@@ -69,8 +69,9 @@ void main() {
       expect(nationalIdError('٣٠٥٠٩٢٠٠١١٢٣٤٥'), null);
       expect(normalizeNationalId('٣٠٥٠٩٢٠٠١١٢٣٤٥'), '30509200112345');
       expect(nationalIdError(''), null);
-      for (final v in ['123', '30502300112345', '39901010112345'])
+      for (final v in ['123', '30502300112345', '39901010112345']) {
         expect(nationalIdError(v), isNotNull);
+      }
     },
   );
   test('withdrawal fee uses 5 percent rounded to a piaster', () {

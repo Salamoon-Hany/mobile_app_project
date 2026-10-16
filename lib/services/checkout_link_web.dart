@@ -1,9 +1,15 @@
 import 'secure_api.dart';
-// ignore: deprecated_member_use
-import 'dart:html' as html;
+import 'dart:js_interop';
+
+@JS('window.open')
+external JSAny? _openCheckoutWindow(
+  String url,
+  String target,
+  String features,
+);
 
 bool openCheckoutLink(String url) {
   if (!isTrustedCheckout(url)) return false;
-  html.window.open(url, '_blank', 'noopener,noreferrer');
+  _openCheckoutWindow(url, '_blank', 'noopener,noreferrer');
   return true;
 }
