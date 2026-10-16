@@ -30,7 +30,9 @@ class Marketplace extends ChangeNotifier {
   Map<String, dynamic>? rating;
   List<Map<String, dynamic>> orders = [];
   List<Map<String, dynamic>> quotes = [], notices = [];
-  bool isAdmin = false, _noticesReady = false;
+  bool isAdmin = false,
+      workerApplicationRequested = false,
+      _noticesReady = false;
   final Set<String> _seenNotices = {};
   List<Map<String, dynamic>> withdrawals = [];
   String? error;
@@ -247,6 +249,7 @@ class Marketplace extends ChangeNotifier {
     quotes = [];
     notices = [];
     isAdmin = false;
+    workerApplicationRequested = false;
     _noticesReady = false;
     _seenNotices.clear();
     withdrawals = [];
@@ -275,6 +278,7 @@ class Marketplace extends ChangeNotifier {
   void apply(Map<String, dynamic> data) {
     account = Map<String, dynamic>.from(data['account'] as Map);
     isAdmin = data['isAdmin'] == true;
+    workerApplicationRequested = data['workerApplicationRequested'] == true;
     quotes = (data['quotes'] as List? ?? [])
         .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();

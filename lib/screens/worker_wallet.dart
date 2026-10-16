@@ -58,7 +58,10 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
       return;
     }
     setState(() => _busy = true);
-    final fee = withdrawalFee(amount);
+    final fee = withdrawalFee(
+      amount,
+      rate: Marketplace.shared.isWorker ? 5 : 1,
+    );
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -68,7 +71,9 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${tr('Amount')}: ${egp(amount)}'),
-            Text('${tr('Withdrawal fee (5%)')}: ${egp(fee)}'),
+            Text(
+              '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (5%)' : 'Withdrawal fee (1%)')}: ${egp(fee)}',
+            ),
             Text('${tr('You receive')}: ${egp(amount - fee)}'),
             Text(destination),
             const SizedBox(height: 12),
@@ -192,7 +197,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
           builder: (c, _) {
             final m = Marketplace.shared,
                 a = _gross ?? 0,
-                fee = withdrawalFee(a);
+                fee = withdrawalFee(a, rate: m.isWorker ? 5 : 1);
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
@@ -209,7 +214,9 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const AppText('Available earnings'),
+                              AppText(
+                                m.isWorker ? 'Available earnings' : 'Balance',
+                              ),
                               Text(
                                 egp(m.account?['balance'] as int? ?? 0),
                                 style: const TextStyle(
@@ -286,8 +293,12 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                         children: [
                           Row(
                             children: [
-                              const Expanded(
-                                child: AppText('Withdrawal fee (5%)'),
+                              Expanded(
+                                child: AppText(
+                                  m.isWorker
+                                      ? 'Withdrawal fee (5%)'
+                                      : 'Withdrawal fee (1%)',
+                                ),
                               ),
                               Text(egp(fee)),
                             ],
@@ -335,69 +346,74 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                     ),
 
                     const SizedBox(height: 28),
-                    const AppText(
-                      'Earnings history',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    if (!m.assignedOrders.any(
-                      (o) => o['status'] == 'completed',
-                    ))
-                      const SanadPanel(
-                        child: AppText('Your completed jobs will appear here.'),
-                      ),
-                    for (final o in m.assignedOrders.where(
-                      (o) => o['status'] == 'completed',
-                    ))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: SanadPanel(
-                          child: Row(
-                            children: [
-                              const CircleAvatar(
-                                backgroundColor: Color(0xFFE5FAC3),
-                                child: Icon(
-                                  Icons.arrow_downward,
-                                  color: Color(0xFF187B34),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const AppText(
-                                      'Completed job',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      o['customer_name'] as String,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: SanadUi.muted(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '+${egp(o['amount'] as int)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF187B34),
-                                ),
-                              ),
-                            ],
-                          ),
+                    if (m.isWorker) ...[
+                      const AppText(
+                        'Earnings history',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    const SizedBox(height: 28),
+                      const SizedBox(height: 14),
+                      if (!m.assignedOrders.any(
+                        (o) => o['status'] == 'completed',
+                      ))
+                        const SanadPanel(
+                          child: AppText(
+                            'Your completed jobs will appear here.',
+                          ),
+                        ),
+                      for (final o in m.assignedOrders.where(
+                        (o) => o['status'] == 'completed',
+                      ))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: SanadPanel(
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  backgroundColor: Color(0xFFE5FAC3),
+                                  child: Icon(
+                                    Icons.arrow_downward,
+                                    color: Color(0xFF187B34),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const AppText(
+                                        'Completed job',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        o['customer_name'] as String,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: SanadUi.muted(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '+${egp(o['amount'] as int)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF187B34),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 28),
+                    ],
                     const AppText(
                       'Withdrawal history',
                       style: TextStyle(
@@ -432,7 +448,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                                 ],
                               ),
                               Text(
-                                '${tr('Withdrawal fee (5%)')}: ${egp(w['fee'] as int)}',
+                                '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (5%)' : 'Withdrawal fee (1%)')}: ${egp(w['fee'] as int)}',
                               ),
                               Text(
                                 '${tr('You receive')}: ${egp(w['net'] as int)}',
@@ -470,4 +486,4 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
   }
 }
 
-int withdrawalFee(int amount) => (amount * 5 + 50) ~/ 100;
+int withdrawalFee(int amount, {int rate = 5}) => (amount * rate + 50) ~/ 100;

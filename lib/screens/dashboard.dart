@@ -698,7 +698,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(height: 12),
                       AppText(
-                        'El.Ostaz.Company@Gmail.com',
+                        'Sandny.info@gmail.com',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodyMedium?.color,

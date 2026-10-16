@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import '../models/wallet.dart';
 import '../services/wallet_service.dart';
 import '../services/checkout_link.dart';
+import '../services/marketplace_service.dart';
+import 'worker_wallet.dart';
 
 class AddFundsScreen extends StatefulWidget {
   const AddFundsScreen({super.key, this.service});
@@ -207,6 +209,19 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (Marketplace.enabled)
+                OutlinedButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WorkerWalletScreen(),
+                          ),
+                        ),
+                  icon: const Icon(Icons.north_east),
+                  label: const AppText('Withdraw funds'),
+                ),
               const SizedBox(height: 20),
               if (_receipt == null && _session == null)
                 Form(
