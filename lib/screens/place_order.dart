@@ -693,9 +693,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                               Text(
                                 (w['review_count'] as int? ?? 0) == 0
                                     ? tr('No reviews yet')
-                                    : '★ ${(w['rating'] as num).toStringAsFixed(
-                                            1,
-                                          )} / 5 • ${w['jobs_completed'] ?? 0}',
+                                    : '★ ${(w['rating'] as num).toStringAsFixed(1)} / 5 • ${w['jobs_completed'] ?? 0}',
                               ),
                               TextButton(
                                 onPressed: () => Navigator.push(

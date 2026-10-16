@@ -476,10 +476,7 @@ class _WorkerHomeState extends State<WorkerHome> {
                       child: Text(
                         i == 2
                             ? tr('History')
-                            : '${tr(i == 0 ? 'Pending' : 'Active')} (${[
-                                    pending.length,
-                                    active.length,
-                                  ][i]})',
+                            : '${tr(i == 0 ? 'Pending' : 'Active')} (${[pending.length, active.length][i]})',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

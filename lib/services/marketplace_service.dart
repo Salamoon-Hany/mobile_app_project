@@ -282,7 +282,9 @@ class Marketplace extends ChangeNotifier {
         .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();
     for (final n in notices) {
-      if (_noticesReady && !_seenNotices.contains(n['id']) && n['read'] != true) {
+      if (_noticesReady &&
+          !_seenNotices.contains(n['id']) &&
+          n['read'] != true) {
         alerts.showAlert(tr('SANAD update'), tr(n['body'] as String));
       }
       _seenNotices.add(n['id'] as String);
