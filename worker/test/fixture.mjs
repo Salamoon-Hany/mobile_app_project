@@ -10,6 +10,8 @@ export function setup(file=':memory:'){
  if(!sql.prepare("PRAGMA table_info(marketplace_accounts)").all().some(c=>c.name==='available'))sql.exec(fs.readFileSync(new URL('../../drizzle/0004_worker_availability.sql',import.meta.url),'utf8'));
  if(!sql.prepare("SELECT name FROM sqlite_master WHERE name='order_messages'").get())sql.exec(fs.readFileSync(new URL('../../drizzle/0005_service_experience.sql',import.meta.url),'utf8'));
  if(!sql.prepare("SELECT name FROM sqlite_master WHERE name='security_rate_limits'").get())sql.exec(fs.readFileSync(new URL('../../drizzle/0006_security.sql',import.meta.url),'utf8'));
+ if(!sql.prepare("SELECT name FROM sqlite_master WHERE name='platform_fee_ledger'").get())sql.exec(fs.readFileSync(new URL('../../drizzle/0007_admin_finance.sql',import.meta.url),'utf8'));
+ if(!sql.prepare("SELECT sql FROM sqlite_master WHERE name='wallet_withdrawals'").get().sql.includes('800'))sql.exec(fs.readFileSync(new URL('../../drizzle/0008_fee_policy.sql',import.meta.url),'utf8'));
  const db={prepare(statement){return {bind(...args){return {async first(){return sql.prepare(statement).get(...args);},async all(){return {results:sql.prepare(statement).all(...args)};},async run(){const r=sql.prepare(statement).run(...args);return {meta:{changes:r.changes}};}};}};}};
  let tail=Promise.resolve();db.batch=(statements)=>{const next=tail.then(async()=>{sql.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}});tail=next.catch(()=>{});return next;};
  return {sql,repo:new MarketplaceRepository(db)};

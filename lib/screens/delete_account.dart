@@ -1,8 +1,11 @@
 import '../services/secure_api.dart';
+
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+
 import '../l10n/app_language.dart';
 import '../services/account_service.dart';
 import '../services/local_account_store.dart';
@@ -18,6 +21,7 @@ class DeleteAccountScreen extends StatefulWidget {
 class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   final _password = TextEditingController();
   bool _busy = false, _confirmed = false;
+  bool _showPassword = false;
   String? _error;
   @override
   void dispose() {
@@ -134,9 +138,25 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   TextField(
                     controller: _password,
                     enabled: !_busy,
-                    obscureText: true,
+                    obscureText: !_showPassword,
                     decoration: InputDecoration(
                       labelText: tr('Password'),
+                      suffixIcon: IconButton(
+                        key: const Key('toggle-password'),
+                        tooltip: tr(
+                          _showPassword ? 'Hide password' : 'Show password',
+                        ),
+                        onPressed: _busy
+                            ? null
+                            : () => setState(
+                                () => _showPassword = !_showPassword,
+                              ),
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                      ),
                       border: const OutlineInputBorder(),
                     ),
                     onChanged: (_) => setState(() {}),

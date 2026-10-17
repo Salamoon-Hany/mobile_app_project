@@ -30,7 +30,9 @@ class Marketplace extends ChangeNotifier {
   Map<String, dynamic>? rating;
   List<Map<String, dynamic>> orders = [];
   List<Map<String, dynamic>> quotes = [], notices = [];
-  bool isAdmin = false, _noticesReady = false;
+  bool isAdmin = false,
+      workerApplicationRequested = false,
+      _noticesReady = false;
   final Set<String> _seenNotices = {};
   List<Map<String, dynamic>> withdrawals = [];
   String? error;
@@ -38,6 +40,7 @@ class Marketplace extends ChangeNotifier {
   String? _uid;
   int _generation = 0;
   bool _refreshing = false;
+  int get unreadCount => notices.where((n) => n['read'] != true).length;
   bool get isWorker => account?['role'] == 'worker';
   List<Map<String, dynamic>> get assignedOrders => orders
       .where(
@@ -181,6 +184,15 @@ class Marketplace extends ChangeNotifier {
     return decodeApiObject(response.body);
   }
 
+  Future<bool> identify(User user) async {
+    stop();
+    _uid = user.uid;
+    final data = await request('session');
+    isAdmin = data['isAdmin'] == true && data['role'] == 'admin';
+    notifyListeners();
+    return isAdmin;
+  }
+
   Future<void> attach(User user) async {
     if (_uid == user.uid && account != null) return;
     stop();
@@ -247,6 +259,7 @@ class Marketplace extends ChangeNotifier {
     quotes = [];
     notices = [];
     isAdmin = false;
+    workerApplicationRequested = false;
     _noticesReady = false;
     _seenNotices.clear();
     withdrawals = [];
@@ -275,6 +288,7 @@ class Marketplace extends ChangeNotifier {
   void apply(Map<String, dynamic> data) {
     account = Map<String, dynamic>.from(data['account'] as Map);
     isAdmin = data['isAdmin'] == true;
+    workerApplicationRequested = data['workerApplicationRequested'] == true;
     quotes = (data['quotes'] as List? ?? [])
         .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();
@@ -282,7 +296,9 @@ class Marketplace extends ChangeNotifier {
         .map((x) => Map<String, dynamic>.from(x as Map))
         .toList();
     for (final n in notices) {
-      if (_noticesReady && !_seenNotices.contains(n['id']) && n['read'] != true) {
+      if (_noticesReady &&
+          !_seenNotices.contains(n['id']) &&
+          n['read'] != true) {
         alerts.showAlert(tr('SANAD update'), tr(n['body'] as String));
       }
       _seenNotices.add(n['id'] as String);

@@ -1,3 +1,4 @@
+import '../widgets/notification_badge.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import '../widgets/sanad_ui.dart';
@@ -128,6 +129,10 @@ class _WorkerHomeState extends State<WorkerHome> {
     }
   }
 
+  void _openWallet() => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const WorkerWalletScreen()),
+  );
   void _jobs(int filter) => setState(() {
     _tab = 1;
     _filter = filter;
@@ -364,7 +369,7 @@ class _WorkerHomeState extends State<WorkerHome> {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: () => setState(() => _tab = 2),
+                    onPressed: _openWallet,
                     child: const AppText(
                       'View wallet',
                       style: TextStyle(fontSize: 12),
@@ -476,10 +481,7 @@ class _WorkerHomeState extends State<WorkerHome> {
                       child: Text(
                         i == 2
                             ? tr('History')
-                            : '${tr(i == 0 ? 'Pending' : 'Active')} (${[
-                                    pending.length,
-                                    active.length,
-                                  ][i]})',
+                            : '${tr(i == 0 ? 'Pending' : 'Active')} (${[pending.length, active.length][i]})',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -524,7 +526,7 @@ class _WorkerHomeState extends State<WorkerHome> {
                     const Icon(Icons.chevron_right),
                   ],
                 ),
-                onTap: () => setState(() => _tab = 2),
+                onTap: _openWallet,
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
@@ -631,10 +633,21 @@ class _WorkerHomeState extends State<WorkerHome> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                  actions: [_avatar(), const SizedBox(width: 8)],
+                  actions: [
+                    IconButton(
+                      tooltip: tr('Notifications'),
+                      onPressed: () => setState(() => _tab = 2),
+                      icon: NotificationBadge(
+                        count: m.unreadCount,
+                        child: const Icon(Icons.notifications_outlined),
+                      ),
+                    ),
+                    _avatar(),
+                    const SizedBox(width: 8),
+                  ],
                 ),
           body: _tab == 2
-              ? const WorkerWalletScreen(embedded: true)
+              ? const ActivityScreen()
               : RefreshIndicator(
                   onRefresh: m.refresh,
                   child: ListView(
@@ -693,19 +706,25 @@ class _WorkerHomeState extends State<WorkerHome> {
                   label: Text(pending.length.toString()),
                   child: const Icon(Icons.assignment_outlined),
                 ),
-                selectedIcon: const Icon(
-                  Icons.assignment_outlined,
-                  color: SanadUi.ink,
+                selectedIcon: NotificationBadge(
+                  count: pending.length,
+                  child: const Icon(
+                    Icons.assignment_outlined,
+                    color: SanadUi.ink,
+                  ),
                 ),
                 label: tr('Jobs'),
               ),
               NavigationDestination(
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                selectedIcon: const Icon(
-                  Icons.account_balance_wallet_outlined,
-                  color: SanadUi.ink,
+                icon: NotificationBadge(
+                  count: m.unreadCount,
+                  child: const Icon(Icons.notifications_outlined),
                 ),
-                label: tr('Wallet'),
+                selectedIcon: NotificationBadge(
+                  count: m.unreadCount,
+                  child: const Icon(Icons.notifications, color: SanadUi.ink),
+                ),
+                label: tr('Activity & alerts'),
               ),
               NavigationDestination(
                 icon: const Icon(Icons.settings_outlined),

@@ -74,10 +74,10 @@ void main() {
       }
     },
   );
-  test('withdrawal fee uses 5 percent rounded to a piaster', () {
-    expect(withdrawalFee(10000), 500);
-    expect(withdrawalFee(1010), 51);
-    expect(withdrawalFee(1001), 50);
+  test('withdrawal fee uses 8 percent rounded to a piaster', () {
+    expect(withdrawalFee(10000), 800);
+    expect(withdrawalFee(1010), 81);
+    expect(withdrawalFee(1001), 80);
   });
   testWidgets('rating submits optional feedback, including an empty comment', (
     t,
@@ -224,8 +224,8 @@ void main() {
       await t.tap(find.widgetWithText(FilledButton, 'Request withdrawal'));
       await t.pump(const Duration(milliseconds: 400));
       expect(find.text('Confirm withdrawal'), findsOneWidget);
-      expect(find.text('Withdrawal fee (5%): EGP 5.00'), findsWidgets);
-      expect(find.text('You receive: EGP 95.00'), findsWidgets);
+      expect(find.text('Withdrawal fee (8%): EGP 8.00'), findsWidgets);
+      expect(find.text('You receive: EGP 92.00'), findsWidgets);
       await t.tap(find.text('Back'));
       await t.pumpAndSettle();
       expect(Marketplace.shared.account!['balance'], 10000);
