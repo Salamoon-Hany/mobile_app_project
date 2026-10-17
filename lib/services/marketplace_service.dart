@@ -183,6 +183,15 @@ class Marketplace extends ChangeNotifier {
     return decodeApiObject(response.body);
   }
 
+  Future<bool> identify(User user) async {
+    stop();
+    _uid = user.uid;
+    final data = await request('session');
+    isAdmin = data['isAdmin'] == true && data['role'] == 'admin';
+    notifyListeners();
+    return isAdmin;
+  }
+
   Future<void> attach(User user) async {
     if (_uid == user.uid && account != null) return;
     stop();

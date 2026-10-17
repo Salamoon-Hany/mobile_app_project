@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app_project/l10n/app_language.dart';
 import 'package:mobile_app_project/screens/admin_dashboard.dart';
+import 'package:mobile_app_project/screens/auth_gate.dart';
+import 'package:mobile_app_project/screens/worker_home.dart';
 import 'package:mobile_app_project/screens/dashboard.dart';
 import 'package:mobile_app_project/screens/worker_wallet.dart';
 import 'package:mobile_app_project/services/marketplace_service.dart';
@@ -73,6 +75,23 @@ void main() {
     Marketplace.shared.testTransport = null;
     AppState.clearAccount();
   });
+  testWidgets(
+    'admin lands directly in a standalone UI without an account',
+    (t) async {
+      Marketplace.shared.isAdmin = true;
+      expect(Marketplace.shared.account, isNull);
+      Marketplace.shared.testTransport = (p, b) async => dashboard();
+      await t.pumpWidget(app(const AccountHome()));
+      await t.pumpAndSettle();
+      expect(find.byType(AdminScreen), findsOneWidget);
+      expect(find.byType(MyHomePage), findsNothing);
+      expect(find.byType(WorkerHome), findsNothing);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
+      expect(find.byIcon(Icons.language), findsOneWidget);
+      expect(Marketplace.shared.account, isNull);
+      expect(t.takeException(), isNull);
+    },
+  );
   testWidgets('ordinary users cannot open the admin dashboard', (t) async {
     seed(admin: false);
     var requests = 0;

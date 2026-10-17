@@ -9,6 +9,7 @@ import 'auth_landing.dart';
 import 'dashboard.dart';
 import 'worker_home.dart';
 import 'delete_account.dart';
+import 'admin_dashboard.dart';
 import '../services/marketplace_service.dart';
 
 // This gate remains under all protected routes and removes them on sign-out.
@@ -86,6 +87,24 @@ class _AuthGateState extends State<AuthGate> {
       _loading = true;
       _error = null;
     });
+    if (Marketplace.enabled) {
+      try {
+        final admin = await Marketplace.shared.identify(user);
+        if (!mounted || generation != _generation) return;
+        if (admin) {
+          setState(() {
+            _registered = true;
+            _loading = false;
+          });
+          return;
+        }
+      } catch (e) {
+        if (generation == _generation) {
+          _fail(e is FormatException ? e.message : null);
+        }
+        return;
+      }
+    }
     _profile = AccountService.profile(user.uid).snapshots().listen(
       (snapshot) async {
         if (!mounted ||
@@ -171,13 +190,19 @@ class _AuthGateState extends State<AuthGate> {
         ),
       );
     }
-    return _registered
-        ? AnimatedBuilder(
-            animation: Marketplace.shared,
-            builder: (_, __) => Marketplace.shared.isWorker
-                ? const WorkerHome()
-                : const MyHomePage(),
-          )
-        : const AuthLandingScreen();
+    return _registered ? const AccountHome() : const AuthLandingScreen();
   }
+}
+
+class AccountHome extends StatelessWidget {
+  const AccountHome({super.key});
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: Marketplace.shared,
+    builder: (_, __) => Marketplace.shared.isAdmin
+        ? const AdminScreen()
+        : Marketplace.shared.isWorker
+        ? const WorkerHome()
+        : const MyHomePage(),
+  );
 }

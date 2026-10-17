@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../l10n/app_language.dart';
 import '../models/wallet.dart';
@@ -46,6 +47,17 @@ class _AdminState extends State<AdminScreen> {
       if (mounted) setState(() => _error = _message(e));
     } finally {
       _loading = false;
+    }
+  }
+
+  Future<void> _logout() async {
+    setState(() => _busy = true);
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      if (mounted) setState(() => _error = _message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -517,8 +529,15 @@ class _AdminState extends State<AdminScreen> {
       length: _tabs.length,
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const AppText('Admin panel'),
           actions: [
+            const AuthLanguageButton(),
+            IconButton(
+              onPressed: _busy ? null : _logout,
+              icon: const Icon(Icons.logout),
+              tooltip: tr('Log out'),
+            ),
             IconButton(
               onPressed: _busy ? null : _load,
               icon: const Icon(Icons.refresh),

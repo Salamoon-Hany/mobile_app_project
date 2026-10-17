@@ -237,12 +237,17 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    const url=new URL(request.url);if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)failure('FORBIDDEN',403);
    if(!['GET','POST'].includes(request.method))failure('METHOD_NOT_ALLOWED',405);
    const deleting=url.pathname==='/api/marketplace/account/delete';
-   const user=await authenticate(request,url.pathname==='/api/marketplace/signup-role'&&request.method==='POST',deleting||url.pathname.startsWith('/api/marketplace/admin'));let body={};
+   const user=await authenticate(request,url.pathname==='/api/marketplace/signup-role'&&request.method==='POST',deleting||url.pathname.startsWith('/api/marketplace/admin')||url.pathname==='/api/marketplace/session');let body={};
    if(request.method==='POST')body=await readJson(request);
    if(limiterEnabled){const limiter=new RequestLimiter(repository.db,now);await limiter.hit(request.method==='GET'?'read':'write',user.localId,request.method==='GET'?150:30);if(request.method==='POST'&&/\/(deposit|withdrawals|orders)$/.test(url.pathname))await limiter.hit('financial',user.localId,10);}
    let data;const route=url.pathname.replace('/api/marketplace','');
-   if(route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
    const isAdmin=user.emailVerified===true&&adminEmails.map(x=>x.trim().toLowerCase()).includes(user.email.toLowerCase());
+   // Administrators are Firebase identities, never marketplace customers/workers.
+   // This route works before any customer profile or marketplace row exists.
+   if(route==='/session'&&request.method==='GET')return Response.json({isAdmin,role:isAdmin?'admin':null},{headers:{'Cache-Control':'no-store'}});
+   if(isAdmin&&!route.startsWith('/admin'))failure('FORBIDDEN',403);
+   if(!isAdmin&&route.startsWith('/admin'))failure('FORBIDDEN',403);
+   if(!isAdmin&&route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
    if(route==='/admin'&&request.method==='GET'){if(!isAdmin)failure('FORBIDDEN',403);data=await experience.adminSnapshot();}
    else if(route==='/admin/decision'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);await experience.adminDecision(user.localId,body,{allowDemoFunds});data=await experience.adminSnapshot();}
    else if(route==='/admin/photo'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);const row=await repository.db.prepare('SELECT photo FROM order_complaints WHERE id=?').bind(body.id).first();if(!row)failure('NOT_FOUND',404);data={photo:row.photo};}
@@ -283,7 +288,7 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    else if(route==='/orders'&&request.method==='POST'){await repository.createOrder(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/orders\/[^/]+\/decision$/.test(route)&&request.method==='POST'){await repository.decide(user.localId,route.split('/')[2],body.action);data=await repository.snapshot(user.localId);}
    else failure('NOT_FOUND',404);
-   if(route!=='/account/delete')await repository.finance.touch(user,['/signup-role','/bootstrap'].includes(route)?body.role:undefined);
+   if(!isAdmin&&route!=='/account/delete')await repository.finance.touch(user,['/signup-role','/bootstrap'].includes(route)?body.role:undefined);
    if(data?.account){data.workerApplicationRequested=data.account.role==='customer'&&(await repository.db.prepare('SELECT requested_role FROM account_activity WHERE uid=?').bind(user.localId).first())?.requested_role==='worker';data.isAdmin=isAdmin;data.quotes=await experience.quotes(user.localId);data.notices=await experience.notices(user.localId);}
    assertPublicOutput(data);
    return Response.json(data,{headers:{'Cache-Control':'no-store'}});

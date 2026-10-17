@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
+import {resetMarketplaceData,RESET_TABLES} from '../../tools/reset-marketplace-data.mjs';
 import {fixture,setup} from './fixture.mjs';
 import {PlatformFinance,feeFor} from '../admin-finance.mjs';
 import {createMarketplaceHandler} from '../marketplace.mjs';
@@ -120,5 +121,50 @@ test('new administrator sees global lifecycle and payment history while deleted 
   assert.ok(d.activity.some(x=>x.event==='Deposit completed'&&x.amount===10000&&x.fee===100&&x.mode==='demo'));
   assert.ok(!JSON.stringify(d).includes('private@example.test'));
   assert.equal(d.platform.demoBalance,100);
+ }finally{sql.close();}
+});
+
+test('administrator is an independent identity with no marketplace account and no customer operations',async()=>{
+ const {repo,sql}=setup();try{
+  let email='Sandny.info@gmail.com',verified=true;
+  const handler=createMarketplaceHandler({repository:repo,apiKey:'test-key',adminEmails:['sandny.info@gmail.com'],fetchImpl:async()=>Response.json({users:[{localId:'standalone_admin',email,emailVerified:verified,createdAt:String(Date.now())}]})});
+  const req=(path,body)=>new Request('https://sanad.test/api/marketplace/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer admin-session','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+  const session=await handler(req('session'));
+  assert.equal(session.status,200);assert.equal(session.headers.get('Cache-Control'),'no-store');
+  assert.deepEqual(await session.json(),{isAdmin:true,role:'admin'});
+  const dashboard=await handler(req('admin'));assert.equal(dashboard.status,200);
+  assert.equal((await dashboard.json()).summary.accounts,0);
+  assert.equal(await repo.account('standalone_admin'),undefined);
+  for(const [path,body] of [['bootstrap',{name:'Admin',role:'worker'}],['signup-role',{role:'customer'}],['deposit',{requestId:'admin_deposit_001',amount:10000,method:'visa'}],['worker-application',{fullName:'Admin'}],['snapshot',null]]){
+   assert.equal((await handler(req(path,body))).status,403,path);
+  }
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM marketplace_accounts').get().n,0);
+  email='ordinary@example.test';
+  assert.deepEqual(await (await handler(req('session'))).json(),{isAdmin:false,role:null});
+  assert.equal((await handler(req('admin'))).status,403);
+  verified=false;assert.equal((await handler(req('session'))).status,401);
+ }finally{sql.close();}
+});
+test('operator reset removes live and deleted accounts, funds, events and counters without changing the schema',async()=>{
+ const {repo,sql}=await fixture();try{
+  await repo.deposit('c',{requestId:'reset_deposit_001',amount:10000,method:'visa'});
+  await repo.finance.touch({localId:'c',email:'old@example.test',emailVerified:true,createdAt:String(Date.now())});
+  await repo.deleteAccount('other');
+  await repo.withdraw('c',payout('reset_payout_001'));
+  await assert.rejects(resetMarketplaceData(repo.db,'wrong'),/RESET_CONFIRMATION_REQUIRED/);
+  assert.equal((await repo.finance.dashboard()).summary.deletedAccounts,1);
+  await resetMarketplaceData(repo.db,'RESET SANAD DATA');
+  for(const table of RESET_TABLES)assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM '+table).get().n,0,table);
+  assert.deepEqual(sql.prepare('PRAGMA foreign_key_check').all(),[]);
+  const d=await repo.finance.dashboard();
+  assert.equal(d.summary.accounts,0);assert.equal(d.summary.deletedAccounts,0);
+  assert.equal(d.summary.registeredThisMonth,0);assert.equal(d.jobs.total,0);
+  assert.equal(d.platform.balance,0);assert.equal(d.platform.demoBalance,0);
+  assert.equal(d.activity.length,0);assert.equal(d.ledger.length,0);
+  assert.ok(d.registrations.every(r=>r.total===0));
+  await resetMarketplaceData(repo.db,'RESET SANAD DATA');
+  await repo.register({localId:'fresh',displayName:'Fresh Customer',email:'fresh@example.test',emailVerified:true},{role:'customer',name:'Fresh Customer'});
+  assert.equal((await repo.account('fresh')).balance,0);
+  assert.equal((await repo.snapshot('fresh')).orders.length,0);
  }finally{sql.close();}
 });
