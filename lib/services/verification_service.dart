@@ -44,8 +44,9 @@ class VerificationService {
         password: password,
       );
       await result.user?.reload();
-      if (_auth.currentUser?.emailVerified == true)
+      if (_auth.currentUser?.emailVerified == true) {
         await _auth.currentUser!.getIdToken(true);
+      }
       if (checked != null && result.user?.uid != checked.uid) {
         await _auth.signOut();
         throw const FormatException(

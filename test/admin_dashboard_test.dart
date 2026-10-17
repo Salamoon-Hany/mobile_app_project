@@ -75,6 +75,49 @@ void main() {
     Marketplace.shared.testTransport = null;
     AppState.clearAccount();
   });
+  testWidgets('admin bell opens alerts and marks the selected section read', (
+    t,
+  ) async {
+    Marketplace.shared.isAdmin = true;
+    final data = dashboard();
+    data['notifications'] = {
+      'items': [
+        {
+          'id': 'order-alert',
+          'section': 'Orders',
+          'title': 'Order update',
+          'body': 'pending',
+          'at': 1,
+          'read': false,
+        },
+      ],
+      'counts': {'Orders': 1, 'Withdrawals': 1},
+      'unreadCount': 2,
+    };
+    final readSections = <String>[];
+    Marketplace.shared.testTransport = (path, body) async {
+      if (path == 'admin/notifications/read') {
+        readSections.add(body!['section'] as String);
+        data['notifications'] = {
+          'items': [],
+          'counts': {'Orders': 0, 'Withdrawals': 1},
+          'unreadCount': 1,
+        };
+      }
+      return data;
+    };
+    addTearDown(() => t.pumpWidget(const SizedBox()));
+    await t.pumpWidget(app(const AdminScreen()));
+    await t.pumpAndSettle();
+    expect(find.text('2'), findsOneWidget);
+    await t.tap(find.byIcon(Icons.notifications_outlined).first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Order update'));
+    await t.pumpAndSettle();
+    expect(readSections, contains('Orders'));
+    expect(find.text('2'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
   testWidgets('admin lands directly in a standalone UI without an account', (
     t,
   ) async {

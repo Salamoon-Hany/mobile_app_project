@@ -224,8 +224,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 label: tr('Home'),
               ),
               BottomNavigationBarItem(
-                icon: const ReferenceIcon('orders', muted: true),
-                activeIcon: const ReferenceIcon('orders-active'),
+                icon: NotificationBadge(
+                  count: Marketplace.shared.unreadOrderCount,
+                  child: const ReferenceIcon('orders', muted: true),
+                ),
+                activeIcon: NotificationBadge(
+                  count: Marketplace.shared.unreadOrderCount,
+                  child: const ReferenceIcon('orders-active'),
+                ),
                 label: tr('Orders'),
               ),
               BottomNavigationBarItem(

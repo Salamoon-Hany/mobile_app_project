@@ -48,8 +48,9 @@ class _AdminState extends State<AdminScreen>
   }
 
   void _tabChanged() {
-    if (!_tabsController.indexIsChanging)
+    if (!_tabsController.indexIsChanging) {
       _markSection(_tabs[_tabsController.index]);
+    }
   }
 
   Future<void> _load() async {

@@ -168,3 +168,20 @@ test('operator reset removes live and deleted accounts, funds, events and counte
   assert.equal((await repo.snapshot('fresh')).orders.length,0);
  }finally{sql.close();}
 });
+
+test('fee migration is registered and preserves v7 customer and worker withdrawal quotes',()=>{
+ const sql=new DatabaseSync(':memory:');
+ try{
+  const journal=JSON.parse(fs.readFileSync(new URL('../../drizzle/meta/_journal.json',import.meta.url),'utf8'));
+  for(const entry of journal.entries.filter(e=>e.idx<8))sql.exec(fs.readFileSync(new URL('../../drizzle/'+entry.tag+'.sql',import.meta.url),'utf8'));
+  for(const [uid,role,bps,fee] of [['old_customer','customer',100,100],['old_worker','worker',500,500]]){
+   sql.prepare('INSERT INTO marketplace_accounts(uid,role,name,balance,created_at) VALUES(?,?,?,10000,1)').run(uid,role,uid);
+   sql.prepare("INSERT INTO wallet_withdrawals(uid,request_id,role,amount,fee_bps,fee,net,method,destination,reserved,created_at,updated_at) VALUES(?,'old_request',?,10000,?,?,?,'instapay','old@instapay',1,1,1)").run(uid,role,bps,fee,10000-fee);
+  }
+  const before=sql.prepare('SELECT * FROM wallet_withdrawals ORDER BY uid').all();
+  const migration=journal.entries.find(e=>e.idx===8);assert.equal(migration?.tag,'0008_fee_policy');
+  sql.exec(fs.readFileSync(new URL('../../drizzle/'+migration.tag+'.sql',import.meta.url),'utf8'));
+  assert.deepEqual(sql.prepare('SELECT * FROM wallet_withdrawals ORDER BY uid').all(),before);
+  assert.deepEqual(sql.prepare('PRAGMA foreign_key_check').all(),[]);
+ }finally{sql.close();}
+});
