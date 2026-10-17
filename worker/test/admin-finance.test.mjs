@@ -108,8 +108,11 @@ test('new administrator sees global lifecycle and payment history while deleted 
  const {repo,sql}=await fixture();try{
   await repo.finance.touch({localId:'c',email:'private@example.test',emailVerified:true,createdAt:String(Date.now()-1000)});
   await repo.deposit('c',{requestId:'deposit_events_001',amount:10000,method:'visa'});
+  const before=await repo.finance.dashboard();
   await repo.deleteAccount('c');
   const d=await repo.finance.dashboard();
+  assert.equal(d.summary.registeredThisMonth,before.summary.registeredThisMonth);
+  assert.deepEqual(d.registrations,before.registrations);
   assert.equal(d.summary.deletedAccounts,1);assert.equal(d.summary.accounts,2);
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM account_activity WHERE uid='c'").get().n,0);
   assert.ok(d.activity.some(x=>x.event==='Account created'&&x.id==='account:c'));

@@ -28,7 +28,9 @@ one request at a time when acted on; schema migrations contain no data backfill.
 Legacy local balance claims and uncredited deposits do not create platform fees.
 
 The counts cover registered SANAD marketplace accounts, not Firebase identities
-which have never registered with the app. Monthly counts use Africa/Cairo.
+which have never registered with the app. Current account counts exclude deleted
+accounts. Monthly registration counts use SANAD creation dates in Africa/Cairo
+and include later-deleted accounts, so deletion does not rewrite signup history.
 Activity is a successful authenticated request in the rolling last 30 days;
 historical visits before activity tracking are unknown. Available workers and
 active workers are distinct metrics. Aggregate counts cover all matching rows;

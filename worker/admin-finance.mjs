@@ -89,11 +89,11 @@ export class PlatformFinance {
   const now=this.now(),month=businessMonthStart(now),active=now-30*86400000;
   const summary=await this.db.prepare(`SELECT COUNT(*) AS accounts,
    COALESCE(SUM(a.role='customer'),0) AS customers,COALESCE(SUM(a.role='worker'),0) AS workers,
-   COALESCE(SUM(COALESCE(x.auth_created_at,a.created_at)>=?),0) AS registeredThisMonth,
    COALESCE(SUM(a.role='customer' AND x.last_seen_at>=?),0) AS activeCustomers,
    COALESCE(SUM(a.role='worker' AND x.last_seen_at>=?),0) AS activeWorkers,
    COALESCE(SUM(a.role='worker' AND a.available=1),0) AS availableWorkers
-   FROM marketplace_accounts a LEFT JOIN account_activity x ON x.uid=a.uid WHERE a.deleted_at=0`).bind(month,active,active).first();
+   FROM marketplace_accounts a LEFT JOIN account_activity x ON x.uid=a.uid WHERE a.deleted_at=0`).bind(active,active).first();
+  const registered=await this.db.prepare('SELECT COUNT(*) AS total FROM marketplace_accounts WHERE created_at>=? AND created_at<=?').bind(month,now).first();
   const deleted=await this.db.prepare('SELECT COUNT(*) AS total FROM marketplace_accounts WHERE deleted_at>0').bind().first();
   const jobs=await this.db.prepare(`SELECT COUNT(*) AS total,COALESCE(SUM(status='pending'),0) AS pending,COALESCE(SUM(status='accepted'),0) AS accepted,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status IN('rejected','cancelled')),0) AS closed,
    COALESCE(SUM(status='completed' AND updated_at>=?),0) AS completedThisMonth,
@@ -109,7 +109,7 @@ export class PlatformFinance {
   const accounts=(await this.db.prepare("SELECT a.uid,a.name,a.role,a.balance,a.created_at,COALESCE(x.email,'') AS email,x.auth_created_at,x.last_seen_at,COALESCE(x.verified,0) AS verified FROM marketplace_accounts a LEFT JOIN account_activity x ON x.uid=a.uid WHERE a.deleted_at=0 ORDER BY a.created_at DESC LIMIT 100").bind().all()).results;
   const orders=(await this.db.prepare('SELECT o.id,o.status,o.amount,o.created_at,c.name AS customer_name,w.name AS worker_name FROM marketplace_orders o JOIN marketplace_accounts c ON c.uid=o.customer_uid JOIN marketplace_accounts w ON w.uid=o.worker_uid ORDER BY o.created_at DESC LIMIT 100').bind().all()).results;
   const activity=(await this.db.prepare(`SELECT * FROM (
-   SELECT 'account:'||a.uid AS id,'Account created' AS event,a.name AS name,COALESCE(x.auth_created_at,a.created_at) AS created_at,NULL AS amount,NULL AS fee,NULL AS mode
+   SELECT 'account:'||a.uid AS id,'Account created' AS event,a.name AS name,a.created_at AS created_at,NULL AS amount,NULL AS fee,NULL AS mode
     FROM marketplace_accounts a LEFT JOIN account_activity x ON x.uid=a.uid
    UNION ALL SELECT 'deleted:'||uid,'Account deleted',name,deleted_at,NULL,NULL,NULL FROM marketplace_accounts WHERE deleted_at>0
    UNION ALL SELECT l.source_type||':'||l.uid||':'||l.request_id,CASE l.source_type WHEN 'deposit' THEN 'Deposit completed' ELSE 'Withdrawal paid' END,a.name,l.created_at,l.amount,l.fee,l.mode
@@ -119,9 +119,9 @@ export class PlatformFinance {
    const start=businessMonthStart(now,-i),end=businessMonthStart(now,1-i);
    const local=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit'}).formatToParts(new Date(start));
    const label=local.find(p=>p.type==='year').value+'-'+local.find(p=>p.type==='month').value;
-   const row=await this.db.prepare('SELECT COUNT(*) AS total FROM marketplace_accounts a LEFT JOIN account_activity x ON x.uid=a.uid WHERE a.deleted_at=0 AND COALESCE(x.auth_created_at,a.created_at)>=? AND COALESCE(x.auth_created_at,a.created_at)<?').bind(start,end).first();
+   const row=await this.db.prepare('SELECT COUNT(*) AS total FROM marketplace_accounts WHERE created_at>=? AND created_at<?').bind(start,end).first();
    return {month:label,total:row.total};
   }));
-  return {summary:{...summary,deletedAccounts:deleted.total,pendingApplications:applications.pending,pendingWithdrawals:count.pending},jobs,platform:{...platform,pendingFees:count.pendingFees},ledger,accounts,orders,registrations,withdrawals,activity,generatedAt:now};
+  return {summary:{...summary,registeredThisMonth:registered.total,deletedAccounts:deleted.total,pendingApplications:applications.pending,pendingWithdrawals:count.pending},jobs,platform:{...platform,pendingFees:count.pendingFees},ledger,accounts,orders,registrations,withdrawals,activity,generatedAt:now};
  }
 }
