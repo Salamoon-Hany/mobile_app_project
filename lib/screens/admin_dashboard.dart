@@ -65,10 +65,9 @@ class _AdminState extends State<AdminScreen> {
       ? e.message
       : 'Could not load administration. Please retry.';
   String _date(dynamic v) => v is num && v > 0
-      ? DateTime.fromMillisecondsSinceEpoch(v.toInt())
-            .toLocal()
-            .toString()
-            .substring(0, 16)
+      ? DateTime.fromMillisecondsSinceEpoch(
+          v.toInt(),
+        ).toLocal().toString().substring(0, 16)
       : tr('Not recorded');
   int _value(Map m, String key) => (m[key] as num?)?.toInt() ?? 0;
   List<Map<String, dynamic>> _rows(String key) => [
@@ -259,9 +258,9 @@ class _AdminState extends State<AdminScreen> {
 
   Widget _wallet() {
     final p = Map<String, dynamic>.from(_data?['platform'] as Map? ?? {});
-    final ledger = _rows('ledger')
-        .where((r) => r['mode'] == (_demo ? 'demo' : 'live'))
-        .toList();
+    final ledger = _rows(
+      'ledger',
+    ).where((r) => r['mode'] == (_demo ? 'demo' : 'live')).toList();
     return _list([
       _heading('Platform wallet'),
       _grid([
