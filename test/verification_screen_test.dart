@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app_project/services/account_service.dart';
 import 'package:mobile_app_project/services/verification_service.dart';
 import 'package:mobile_app_project/screens/security_verification.dart';
+import 'package:mobile_app_project/screens/delete_account.dart';
 
 class FakeUser implements User {
   @override
@@ -122,6 +123,51 @@ void main() {
     expect(find.textContaining('Test OTP'), findsNothing);
     expect(find.text('Email or verified mobile number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
+  });
+  testWidgets('login password visibility preserves typed text', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: EmailAuthScreen()));
+    final password = find.byType(TextFormField).at(1);
+    await tester.enterText(password, 'MyPassword123');
+    expect(tester.widget<TextFormField>(password).obscureText, isTrue);
+    await tester.tap(find.byKey(const Key('toggle-password')));
+    await tester.pump();
+    expect(tester.widget<TextFormField>(password).obscureText, isFalse);
+    expect(
+      tester.widget<TextFormField>(password).controller!.text,
+      'MyPassword123',
+    );
+    await tester.tap(find.byKey(const Key('toggle-password')));
+    await tester.pump();
+    expect(tester.widget<TextFormField>(password).obscureText, isTrue);
+  });
+  testWidgets('signup confirmation visibility is independent', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: EmailAuthScreen(action: AccountAction.signup)),
+    );
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(2), 'Password123');
+    await tester.enterText(fields.at(3), 'Password123');
+    final toggle = find.byKey(const Key('toggle-confirm-password'));
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(tester.widget<TextFormField>(fields.at(3)).obscureText, isFalse);
+    expect(tester.widget<TextFormField>(fields.at(2)).obscureText, isTrue);
+    expect(
+      tester.widget<TextFormField>(fields.at(3)).controller!.text,
+      'Password123',
+    );
+  });
+  testWidgets('delete account password can be revealed without losing text', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: DeleteAccountScreen()));
+    final password = find.byType(TextField);
+    await tester.enterText(password, 'Password123');
+    await tester.tap(find.byKey(const Key('toggle-password')));
+    await tester.pump();
+    expect(tester.widget<TextField>(password).obscureText, isFalse);
+    expect(tester.widget<TextField>(password).controller!.text, 'Password123');
   });
   testWidgets('signup validates confirmation before creating account', (
     tester,

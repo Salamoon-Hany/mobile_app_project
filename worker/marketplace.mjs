@@ -212,6 +212,7 @@ export class MarketplaceRepository {
    this.db.prepare('DELETE FROM app_ratings WHERE uid=?').bind(uid),
    this.db.prepare('DELETE FROM worker_applications WHERE uid=?').bind(uid),
    this.db.prepare('DELETE FROM phone_login_aliases WHERE uid=?').bind(uid),
+   this.db.prepare('DELETE FROM account_activity WHERE uid=?').bind(uid),
    this.db.prepare("UPDATE marketplace_withdrawals SET destination='' WHERE uid=?").bind(uid),
    this.db.prepare("UPDATE wallet_withdrawals SET destination='' WHERE uid=?").bind(uid),
    this.db.prepare("UPDATE marketplace_orders SET details='',location=?,photo=NULL WHERE customer_uid=?").bind(JSON.stringify({latitude:0,longitude:0,label:'Location removed',fromGps:false,redacted:true}),uid),

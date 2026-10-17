@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/app_language.dart';
 import '../models/wallet.dart';
 import '../services/marketplace_service.dart';
@@ -199,6 +200,7 @@ class _AdminState extends State<AdminScreen> {
         _stat('Total accounts', '${_value(summary, 'accounts')}'),
         _stat('Customers', '${_value(summary, 'customers')}'),
         _stat('Workers', '${_value(summary, 'workers')}'),
+        _stat('Deleted accounts', '${_value(summary, 'deletedAccounts')}'),
         _stat(
           'Registered this month',
           '${_value(summary, 'registeredThisMonth')}',
@@ -482,6 +484,18 @@ class _AdminState extends State<AdminScreen> {
   ]);
   Widget _audit() => _list([
     _heading('Activity log'),
+    for (final r in _rows('activity'))
+      ListTile(
+        title: AppText(r['event'] as String),
+        subtitle: Text(
+          '${tr(r['name'] as String)} • ${_date(r['created_at'])}',
+        ),
+        trailing: r['amount'] == null
+            ? null
+            : Text(
+                '${egp(r['amount'] as int)}\n${tr(r['mode'] == 'demo' ? 'Demo' : 'Real payments')}',
+              ),
+      ),
     for (final r in _rows('audit'))
       ListTile(
         title: AppText(r['decision'] as String),

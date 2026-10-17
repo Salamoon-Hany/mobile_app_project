@@ -103,3 +103,19 @@ test('migration preserves old reservations and reviews and backfills only credit
  try{const w=(await repo.snapshot('legacy')).withdrawals[0];assert.equal(w.amount,1000);assert.equal(w.review_state,'reviewed');assert.equal(w.review_note,'Old review');assert.equal((await repo.account('legacy')).balance,9000);assert.equal(sql.prepare('SELECT SUM(fee) AS fee FROM platform_fee_history').get().fee,10);assert.equal((await repo.finance.dashboard()).platform.balance,0);}
  finally{sql.close();fs.rmSync(dir,{recursive:true});}
 });
+
+test('new administrator sees global lifecycle and payment history while deleted account details are scrubbed',async()=>{
+ const {repo,sql}=await fixture();try{
+  await repo.finance.touch({localId:'c',email:'private@example.test',emailVerified:true,createdAt:String(Date.now()-1000)});
+  await repo.deposit('c',{requestId:'deposit_events_001',amount:10000,method:'visa'});
+  await repo.deleteAccount('c');
+  const d=await repo.finance.dashboard();
+  assert.equal(d.summary.deletedAccounts,1);assert.equal(d.summary.accounts,2);
+  assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM account_activity WHERE uid='c'").get().n,0);
+  assert.ok(d.activity.some(x=>x.event==='Account created'&&x.id==='account:c'));
+  assert.ok(d.activity.some(x=>x.event==='Account deleted'&&x.name==='Deleted account'));
+  assert.ok(d.activity.some(x=>x.event==='Deposit completed'&&x.amount===10000&&x.fee===100&&x.mode==='demo'));
+  assert.ok(!JSON.stringify(d).includes('private@example.test'));
+  assert.equal(d.platform.demoBalance,100);
+ }finally{sql.close();}
+});

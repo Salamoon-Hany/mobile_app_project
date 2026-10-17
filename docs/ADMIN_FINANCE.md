@@ -38,3 +38,15 @@ Validation includes migration compatibility, concurrent deposit retries,
 withdrawal completion/cancellation races, exact refunds, real-payment blocking,
 administrator authorization, account totals beyond 100 rows, and narrow Arabic
 dashboard layout. End-to-end real account login remains an owner check.
+
+Administrator access is global and follows the verified server allowlist, not the
+previous administrator's UID. Switching the allowlist preserves platform history
+and does not transfer a person's wallet. The activity tab includes account
+creation/deletion and settled deposit/withdrawal records, alongside admin actions.
+Deleted accounts are counted separately; their contact/activity profile is removed
+and retained financial records show Deleted account. Historical events derive
+from stored timestamps; unknown visits are not invented.
+
+Password visibility controls are available independently for login/signup, signup
+confirmation, and deletion reauthentication. Fields start hidden; toggling retains
+the typed text and is disabled during submission.
