@@ -126,35 +126,35 @@ void main() {
   });
   testWidgets('login password visibility preserves typed text', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: EmailAuthScreen()));
-    final password = find.byType(TextFormField).at(1);
+    final password = find.byType(TextField).at(1);
     await tester.enterText(password, 'MyPassword123');
-    expect(tester.widget<TextFormField>(password).obscureText, isTrue);
+    expect(tester.widget<TextField>(password).obscureText, isTrue);
     await tester.tap(find.byKey(const Key('toggle-password')));
     await tester.pump();
-    expect(tester.widget<TextFormField>(password).obscureText, isFalse);
+    expect(tester.widget<TextField>(password).obscureText, isFalse);
     expect(
-      tester.widget<TextFormField>(password).controller!.text,
+      tester.widget<TextField>(password).controller!.text,
       'MyPassword123',
     );
     await tester.tap(find.byKey(const Key('toggle-password')));
     await tester.pump();
-    expect(tester.widget<TextFormField>(password).obscureText, isTrue);
+    expect(tester.widget<TextField>(password).obscureText, isTrue);
   });
   testWidgets('signup confirmation visibility is independent', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: EmailAuthScreen(action: AccountAction.signup)),
     );
-    final fields = find.byType(TextFormField);
+    final fields = find.byType(TextField);
     await tester.enterText(fields.at(2), 'Password123');
     await tester.enterText(fields.at(3), 'Password123');
     final toggle = find.byKey(const Key('toggle-confirm-password'));
     await tester.ensureVisible(toggle);
     await tester.tap(toggle);
     await tester.pump();
-    expect(tester.widget<TextFormField>(fields.at(3)).obscureText, isFalse);
-    expect(tester.widget<TextFormField>(fields.at(2)).obscureText, isTrue);
+    expect(tester.widget<TextField>(fields.at(3)).obscureText, isFalse);
+    expect(tester.widget<TextField>(fields.at(2)).obscureText, isTrue);
     expect(
-      tester.widget<TextFormField>(fields.at(3)).controller!.text,
+      tester.widget<TextField>(fields.at(3)).controller!.text,
       'Password123',
     );
   });
