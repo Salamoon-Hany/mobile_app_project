@@ -2,10 +2,10 @@
 
 The support email is Sanad.infoo@gmail.com and the contact phone is 01095069208. Production administrator identities
 are configured through the hosted ADMIN_EMAILS variable, never through a client
-role or an email entered in a request. The owner must register this email in
-SANAD and verify it using Firebase email verification.
+role or an email entered in a request. The project owner provisions this verified
+Firebase identity directly; no customer or worker registration is required.
 
-The Admin panel is available from Settings for the verified configured identity.
+The verified configured identity signs in directly to the dedicated Admin panel.
 It includes an overview, separate platform wallet, applications, withdrawal
 requests, latest orders/accounts, complaints, and an audit log. Worker requests
 require administrator approval; choosing Worker during signup records intent and
@@ -39,7 +39,8 @@ the detail lists show the latest 100 records.
 Validation includes migration compatibility, concurrent deposit retries,
 withdrawal completion/cancellation races, exact refunds, real-payment blocking,
 administrator authorization, account totals beyond 100 rows, and narrow Arabic
-dashboard layout. End-to-end real account login remains an owner check.
+dashboard layout. Production administrator login, the admin session role, and
+dashboard access were also verified on 2026-10-17.
 
 Administrator access is global and follows the verified server allowlist, not the
 previous administrator's UID. Switching the allowlist preserves platform history
@@ -91,3 +92,19 @@ declaring success. Old per-UID device caches must not be imported into new
 identities. Verify zero live/deleted account counts, jobs, ledger balances and
 monthly totals, then verify a new signup starts at zero and the administrator
 lands directly in administration without adding to user/worker counts.
+
+## Production fresh start completed on 2026-10-17
+
+The owner-authorized reset removed three previous Firebase Authentication users,
+four Firestore profiles (including a deleted user's residual profile), and all
+business rows in the 21 known marketplace tables. The sole remaining Auth user
+is the verified sanad.infoo@gmail.com administrator with the admin claim. This
+identity has no customer/worker profile or personal wallet. Google Cloud project
+ownership and IAM were preserved.
+
+The reset ran with marketplace writes paused. All 21 table counts were verified
+as zero; Firestore had no remaining root collections. A subsequent deployment
+removed the temporary operator route and its runtime credential and ended
+maintenance. Hosting schema, migrations, Firebase configuration and the existing
+owner-private audience were preserved. The live Site is version 31. Real payment
+processing remains unconfigured; demo and live funds stay separate.
