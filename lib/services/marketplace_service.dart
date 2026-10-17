@@ -40,6 +40,7 @@ class Marketplace extends ChangeNotifier {
   String? _uid;
   int _generation = 0;
   bool _refreshing = false;
+  int get unreadCount => notices.where((n) => n['read'] != true).length;
   bool get isWorker => account?['role'] == 'worker';
   List<Map<String, dynamic>> get assignedOrders => orders
       .where(

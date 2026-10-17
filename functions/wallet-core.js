@@ -2,7 +2,7 @@
 const {createHash,timingSafeEqual} = require('node:crypto');
 function quote(amountPiasters) {
   if (!Number.isSafeInteger(amountPiasters) || amountPiasters < 1000 || amountPiasters > 100000000) throw new Error('INVALID_AMOUNT');
-  const feePiasters = Math.floor((amountPiasters+50)/100);
+  const feePiasters = Math.floor((amountPiasters*2+50)/100);
   return {amountPiasters,feePiasters,totalPiasters:amountPiasters+feePiasters};
 }
 const money = p => (p/100).toFixed(2);
@@ -30,6 +30,6 @@ function assertPaymentMatches(d,e) {
 }
 function receiptMessage(d) {
   return {subject:`${d.mode==='live'?'':'[TEST] '}Deposit confirmed — EGP ${money(d.amountPiasters)}`,
-    text:`${d.mode==='live'?'':'TEST PAYMENT — not real money\n\n'}An amount of EGP ${money(d.amountPiasters)} has been deposited into your Salamoon Services account.\nPayment method: ${d.method}\nService fee (1%): EGP ${money(d.feePiasters)}\nTotal: EGP ${money(d.totalPiasters)}\nReference: ${d.id}`};
+    text:`${d.mode==='live'?'':'TEST PAYMENT — not real money\n\n'}An amount of EGP ${money(d.amountPiasters)} has been deposited into your Salamoon Services account.\nPayment method: ${d.method}\nService fee (2%): EGP ${money(d.feePiasters)}\nTotal: EGP ${money(d.totalPiasters)}\nReference: ${d.id}`};
 }
 module.exports={quote,money,asPiasters,chargeSignature,notificationSignature,verifyNotification,assertPaymentMatches,receiptMessage};

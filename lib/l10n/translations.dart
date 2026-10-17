@@ -1,4 +1,13 @@
 const arabicStrings = <String, String>{
+  "Service fee (2%)": "رسوم الخدمة (٢٪)",
+  "Withdrawal fee (2%)": "رسوم السحب (٢٪)",
+  "Withdrawal fee (8%)": "رسوم السحب (٨٪)",
+  "Complete withdrawal": "إكمال السحب",
+  "Complete withdrawal?": "إكمال السحب؟",
+  "Withdrawal request": "طلب سحب",
+  "Worker application": "طلب الانضمام كعامل",
+  "Verify your email using the link sent when you signed up.":
+      "أكد بريدك من الرابط المرسل عند إنشاء الحساب.",
   "Overview": "نظرة عامة",
   "Platform wallet": "محفظة المنصة",
   "Administration overview": "نظرة عامة على الإدارة",

@@ -27,29 +27,16 @@ test('registration rejects missing/invalid tokens and unverified email',async()=
   for(const token of [undefined,'wrong']){const {handler,request}=setup();assert.equal((await handler(request('register',{},token))).status,401);}
   const {handler,request}=setup({emailVerified:false});assert.equal((await handler(request('register',{},'owner-token'))).status,401);
 });
-test('verified Egyptian phone with password resolves the same UID across clients',async()=>{
-  const {handler,request}=setup();await handler(request('register',{},'owner-token'));
-  const response=await handler(request('login',{phone:'٠١٠١٢٣٤٥٦٧٨',password:'correct password'}));
-  assert.equal(response.status,200);assert.deepEqual(await response.json(),{email:'person@example.com',uid:'same-uid'});
-  assert.equal(response.headers.get('Cache-Control'),'no-store');
+test('phone password login is unavailable even for a verified profile number',async()=>{
+ const {handler,request}=setup();await handler(request('register',{},'owner-token'));
+ assert.equal((await handler(request('login',{phone:'+201012345678',password:'correct password'}))).status,404);
 });
-test('unknown phone and wrong password return the same generic error',async()=>{
-  const {handler,request}=setup();await handler(request('register',{},'owner-token'));
-  const unknown=await handler(request('login',{phone:'+201099999999',password:'wrong'}));
-  const wrong=await handler(request('login',{phone:'+201012345678',password:'wrong'}));
-  assert.equal(unknown.status,401);assert.equal(wrong.status,401);assert.equal((await unknown.json()).error,(await wrong.json()).error);
-});
-test('a removed/reassigned phone cannot sign in using a stale alias',async()=>{
-  const {handler,request,user}=setup();await handler(request('register',{},'owner-token'));user.phoneNumber='+201099999999';
-  assert.equal((await handler(request('login',{phone:'+201012345678',password:'correct password'}))).status,401);
-});
-test('login is rate limited by phone and IP',async()=>{
-  const {handler,request}=setup();
-  let response;for(let i=0;i<7;i++)response=await handler(request('login',{phone:'+201012345678',password:'wrong'}));
-  assert.equal(response.status,429);
+test('email and password remain the supported login identifiers',async()=>{
+ const {handler}=setup();const response=await handler(new Request('https://sanad.test/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:'person@example.com',password:'correct password'})}));
+ assert.equal(response.status,200);assert.deepEqual(await response.json(),{email:'person@example.com',uid:'same-uid'});
 });
 test('cross-origin calls and malformed phone requests are rejected',async()=>{
   const {handler,request}=setup();const r=request('login',{phone:'+201012345678',password:'wrong'});r.headers.set('Origin','https://other.test');
   assert.equal((await handler(r)).status,403);
-  assert.equal((await handler(request('login',{phone:'not-a-number',password:'x'}))).status,400);
+  assert.equal((await handler(request('login',{phone:'not-a-number',password:'x'}))).status,404);
 });

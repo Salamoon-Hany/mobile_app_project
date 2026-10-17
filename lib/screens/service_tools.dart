@@ -1,3 +1,5 @@
+import 'worker_wallet.dart';
+import '../widgets/notification_badge.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -89,7 +91,10 @@ class ServiceTools extends StatelessWidget {
         onTap: () => open(context, const QuotesScreen()),
       ),
       ListTile(
-        leading: const Icon(Icons.notifications_outlined),
+        leading: NotificationBadge(
+          count: Marketplace.shared.unreadCount,
+          child: const Icon(Icons.notifications_outlined),
+        ),
         title: const AppText('Activity & alerts'),
         onTap: () => open(context, const ActivityScreen()),
       ),
@@ -1023,6 +1028,8 @@ class ActivityScreen extends StatelessWidget {
                           ? 'New message'
                           : n['kind'] == 'quote'
                           ? 'Price quote'
+                          : n['kind'] == 'withdrawal'
+                          ? 'Withdrawal request'
                           : n['kind'] == 'complaint'
                           ? 'Support update'
                           : 'Order update',
@@ -1047,7 +1054,9 @@ class ActivityScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => n['kind'] == 'quote'
+                            builder: (_) => n['kind'] == 'withdrawal'
+                                ? const WorkerWalletScreen()
+                                : n['kind'] == 'quote'
                                 ? const QuotesScreen()
                                 : OrderActivityScreen(
                                     orderId: n['target'] as String,

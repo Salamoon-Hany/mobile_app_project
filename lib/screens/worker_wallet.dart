@@ -60,7 +60,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
     setState(() => _busy = true);
     final fee = withdrawalFee(
       amount,
-      rate: Marketplace.shared.isWorker ? 5 : 1,
+      rate: Marketplace.shared.isWorker ? 8 : 2,
     );
     final ok = await showDialog<bool>(
       context: context,
@@ -72,7 +72,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
           children: [
             Text('${tr('Amount')}: ${egp(amount)}'),
             Text(
-              '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (5%)' : 'Withdrawal fee (1%)')}: ${egp(fee)}',
+              '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (8%)' : 'Withdrawal fee (2%)')}: ${egp(fee)}',
             ),
             Text('${tr('You receive')}: ${egp(amount - fee)}'),
             Text(destination),
@@ -197,7 +197,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
           builder: (c, _) {
             final m = Marketplace.shared,
                 a = _gross ?? 0,
-                fee = withdrawalFee(a, rate: m.isWorker ? 5 : 1);
+                fee = withdrawalFee(a, rate: m.isWorker ? 8 : 2);
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
@@ -296,8 +296,8 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                               Expanded(
                                 child: AppText(
                                   m.isWorker
-                                      ? 'Withdrawal fee (5%)'
-                                      : 'Withdrawal fee (1%)',
+                                      ? 'Withdrawal fee (8%)'
+                                      : 'Withdrawal fee (2%)',
                                 ),
                               ),
                               Text(egp(fee)),
@@ -448,7 +448,7 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
                                 ],
                               ),
                               Text(
-                                '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (5%)' : 'Withdrawal fee (1%)')}: ${egp(w['fee'] as int)}',
+                                '${tr(Marketplace.shared.isWorker ? 'Withdrawal fee (8%)' : 'Withdrawal fee (2%)')}: ${egp(w['fee'] as int)}',
                               ),
                               Text(
                                 '${tr('You receive')}: ${egp(w['net'] as int)}',
@@ -486,4 +486,4 @@ class _WorkerWalletScreenState extends State<WorkerWalletScreen> {
   }
 }
 
-int withdrawalFee(int amount, {int rate = 5}) => (amount * rate + 50) ~/ 100;
+int withdrawalFee(int amount, {int rate = 8}) => (amount * rate + 50) ~/ 100;

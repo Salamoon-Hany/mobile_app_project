@@ -26,7 +26,7 @@ export class PlatformFinance {
  }
  depositFee(uid,requestId,amount,createdAt){
   return this.db.prepare(`INSERT OR IGNORE INTO platform_fee_ledger(source_type,uid,request_id,role,amount,fee,net,mode,created_at)
-   SELECT 'deposit',uid,request_id,'customer',amount,(amount+50)/100,amount,'demo',?
+   SELECT 'deposit',uid,request_id,'customer',amount,(amount*2+50)/100,amount,'demo',?
    FROM marketplace_deposits WHERE uid=? AND request_id=? AND amount=? AND credited=0`).bind(createdAt,uid,requestId,amount);
  }
  async withdraw(account,body,normalizePhone,{demo=true}={}){
@@ -37,7 +37,7 @@ export class PlatformFinance {
   if(method==='instapay'&&!/^[A-Za-z0-9._-]{3,80}@instapay$/.test(destination))fail('INVALID_DESTINATION');
   const old=await this.db.prepare('SELECT * FROM wallet_withdrawal_history WHERE uid=? AND request_id=?').bind(uid,requestId).first();
   if(old){if(old.amount!==amount||old.method!==method||old.destination!==destination)fail('IDEMPOTENCY_CONFLICT',409);return;}
-  const bps=account.role==='worker'?500:100,fee=feeFor(amount,bps),now=this.now();
+  const bps=account.role==='worker'?800:200,fee=feeFor(amount,bps),now=this.now();
   try{await this.db.batch([
    this.db.prepare("INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN EXISTS(SELECT 1 FROM marketplace_accounts WHERE uid=? AND role=? AND deleted_at=0) THEN 1 ELSE 0 END").bind(uid,account.role),
    this.db.prepare('INSERT OR IGNORE INTO wallet_withdrawals(uid,request_id,role,amount,fee_bps,fee,net,method,destination,mode,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').bind(uid,requestId,account.role,amount,bps,fee,amount-fee,method,destination,demo?'demo':'live',now,now),
@@ -122,6 +122,6 @@ export class PlatformFinance {
    const row=await this.db.prepare('SELECT COUNT(*) AS total FROM marketplace_accounts WHERE created_at>=? AND created_at<?').bind(start,end).first();
    return {month:label,total:row.total};
   }));
-  return {summary:{...summary,registeredThisMonth:registered.total,deletedAccounts:deleted.total,pendingApplications:applications.pending,pendingWithdrawals:count.pending},jobs,platform:{...platform,pendingFees:count.pendingFees},ledger,accounts,orders,registrations,withdrawals,activity,generatedAt:now};
+  return {summary:{...summary,registeredThisMonth:registered.total,deletedAccounts:deleted.total,pendingApplications:applications.pending,pendingWithdrawals:count.pending},jobs,platform:{...platform,totalBalance:platform.balance+platform.demoBalance,totalMonthlyEarnings:platform.monthlyEarnings+platform.monthlyDemoEarnings,pendingFees:count.pendingFees},ledger,accounts,orders,registrations,withdrawals,activity,generatedAt:now};
  }
 }

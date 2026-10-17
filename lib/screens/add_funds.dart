@@ -85,7 +85,7 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
         builder: (context) => AlertDialog(
           title: const AppText('Confirm deposit'),
           content: AppText(
-            '${tr('Wallet credit')}: ${egp(quote.amountPiasters)}\n${tr('Payment method')}: ${tr(_method!.label)}\n${tr('Service fee (1%)')}: ${egp(quote.feePiasters)}\n${tr('Total to pay')}: ${egp(quote.totalPiasters)}',
+            '${tr('Wallet credit')}: ${egp(quote.amountPiasters)}\n${tr('Payment method')}: ${tr(_method!.label)}\n${tr('Service fee (2%)')}: ${egp(quote.feePiasters)}\n${tr('Total to pay')}: ${egp(quote.totalPiasters)}',
           ),
           actions: [
             TextButton(
@@ -288,7 +288,7 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
                                 _quote?.amountPiasters ?? 0,
                               ),
                               _summaryRow(
-                                'Service fee (1%)',
+                                'Service fee (2%)',
                                 _quote?.feePiasters ?? 0,
                               ),
                               const Divider(),

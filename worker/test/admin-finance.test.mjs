@@ -17,28 +17,28 @@ test('customer deposit credits principal and one separate demo platform fee on c
   await Promise.all(Array.from({length:10},()=>repo.deposit('c',{requestId:'deposit_admin_001',amount:10000,method:'visa',fee:0,adminBalance:999999})));
   assert.equal((await repo.account('c')).balance,30000);
   const ledger=sql.prepare('SELECT * FROM platform_fee_ledger').all();
-  assert.equal(ledger.length,1);assert.equal(ledger[0].fee,100);assert.equal(ledger[0].net,10000);assert.equal(ledger[0].mode,'demo');
+  assert.equal(ledger.length,1);assert.equal(ledger[0].fee,200);assert.equal(ledger[0].net,10000);assert.equal(ledger[0].mode,'demo');
   assert.equal((await repo.finance.dashboard()).platform.balance,0);
-  assert.equal((await repo.finance.dashboard()).platform.demoBalance,100);
+  assert.equal((await repo.finance.dashboard()).platform.demoBalance,200);
  }finally{sql.close();}
 });
-test('customer withdrawal charges 1 percent only on completed demo settlement and cannot be paid twice',async()=>{
+test('customer withdrawal charges 2 percent only on completed demo settlement and cannot be paid twice',async()=>{
  const {repo,sql}=await fixture();try{
   await repo.withdraw('c',payout());
   const row=(await repo.snapshot('c')).withdrawals[0];
-  assert.equal(row.fee,100);assert.equal(row.net,9900);assert.equal(row.fee_bps,100);assert.equal(total(sql),0);
+  assert.equal(row.fee,200);assert.equal(row.net,9800);assert.equal(row.fee_bps,200);assert.equal(total(sql),0);
   await repo.finance.decide('admin',paid('c','payout_new_001'),{allowDemoFunds:true});
   await repo.finance.decide('admin',paid('c','payout_new_001'),{allowDemoFunds:true});
-  assert.equal(total(sql),100);assert.equal((await repo.account('c')).balance,10000);
+  assert.equal(total(sql),200);assert.equal((await repo.account('c')).balance,10000);
   await assert.rejects(repo.cancelWithdrawal('c','payout_new_001'),/ORDER_CHANGED/);
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM admin_audit WHERE decision='paid'").get().n,1);
  }finally{sql.close();}
 });
-test('worker fee is 5 percent; review is not payment and reject or cancel refunds gross once',async()=>{
+test('worker fee is 8 percent; review is not payment and reject or cancel refunds gross once',async()=>{
  const {repo,sql}=await fixture();try{
   sql.prepare("UPDATE marketplace_accounts SET balance=30000 WHERE uid='w'").run();
   await repo.withdraw('w',payout('worker_payout_001'));
-  assert.equal((await repo.snapshot('w')).withdrawals[0].fee,500);
+  assert.equal((await repo.snapshot('w')).withdrawals[0].fee,800);
   await repo.finance.decide('admin',{...paid('w','worker_payout_001'),decision:'reviewed'});
   assert.equal(total(sql),0);
   await repo.finance.decide('admin',{...paid('w','worker_payout_001'),decision:'rejected'});
@@ -54,7 +54,7 @@ test('completion racing owner cancellation conserves money and never refunds a p
   await repo.withdraw('c',payout('race_payout_001'));
   await Promise.allSettled([repo.finance.decide('admin',paid('c','race_payout_001'),{allowDemoFunds:true}),repo.cancelWithdrawal('c','race_payout_001')]);
   const row=sql.prepare('SELECT * FROM wallet_withdrawals').get();
-  if(row.status==='paid'){assert.equal((await repo.account('c')).balance,10000);assert.equal(total(sql),100);assert.equal(row.refunded,0);}
+  if(row.status==='paid'){assert.equal((await repo.account('c')).balance,10000);assert.equal(total(sql),200);assert.equal(row.refunded,0);}
   else{assert.equal(row.status,'cancelled');assert.equal((await repo.account('c')).balance,20000);assert.equal(total(sql),0);assert.equal(row.refunded,1);}
  }finally{sql.close();}
 });
@@ -118,9 +118,9 @@ test('new administrator sees global lifecycle and payment history while deleted 
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM account_activity WHERE uid='c'").get().n,0);
   assert.ok(d.activity.some(x=>x.event==='Account created'&&x.id==='account:c'));
   assert.ok(d.activity.some(x=>x.event==='Account deleted'&&x.name==='Deleted account'));
-  assert.ok(d.activity.some(x=>x.event==='Deposit completed'&&x.amount===10000&&x.fee===100&&x.mode==='demo'));
+  assert.ok(d.activity.some(x=>x.event==='Deposit completed'&&x.amount===10000&&x.fee===200&&x.mode==='demo'));
   assert.ok(!JSON.stringify(d).includes('private@example.test'));
-  assert.equal(d.platform.demoBalance,100);
+  assert.equal(d.platform.demoBalance,200);
  }finally{sql.close();}
 });
 

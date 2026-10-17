@@ -60,7 +60,7 @@ class PhoneLoginService {
     }
     if (response.statusCode == 400 || response.statusCode == 401) {
       throw const FormatException(
-        'Email or mobile number and password are incorrect.',
+        'Email or password is incorrect. Sign up if you need an account.',
       );
     }
     if (response.statusCode != 200) {

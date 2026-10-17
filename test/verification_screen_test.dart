@@ -121,7 +121,7 @@ void main() {
     );
     expect(find.textContaining('SMS'), findsNothing);
     expect(find.textContaining('Test OTP'), findsNothing);
-    expect(find.text('Email or verified mobile number'), findsOneWidget);
+    expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
   testWidgets('login password visibility preserves typed text', (tester) async {

@@ -81,6 +81,7 @@ void main() {
     Marketplace.shared.isAdmin = true;
     expect(Marketplace.shared.account, isNull);
     Marketplace.shared.testTransport = (p, b) async => dashboard();
+    addTearDown(() => t.pumpWidget(const SizedBox()));
     await t.pumpWidget(app(const AccountHome()));
     await t.pumpAndSettle();
     expect(find.byType(AdminScreen), findsOneWidget);
@@ -98,6 +99,7 @@ void main() {
       requests++;
       return dashboard();
     };
+    addTearDown(() => t.pumpWidget(const SizedBox()));
     await t.pumpWidget(app(const AdminScreen()));
     await t.pump();
     expect(find.text('Access denied'), findsOneWidget);
@@ -113,28 +115,29 @@ void main() {
       seed();
       AppLanguage.code.value = 'ar';
       Marketplace.shared.testTransport = (p, b) async => dashboard();
+      addTearDown(() => t.pumpWidget(const SizedBox()));
       await t.pumpWidget(app(const AdminScreen()));
       await t.pumpAndSettle();
       expect(find.text('إجمالي الحسابات'), findsWidgets);
       expect(t.takeException(), isNull);
       await t.tap(find.text('محفظة المنصة').first);
       await t.pumpAndSettle();
-      expect(find.text('رصيد المنصة المسجل'), findsWidgets);
+      expect(find.text('رصيد المنصة'), findsWidgets);
       expect(t.takeException(), isNull);
     },
   );
   testWidgets(
-    'customer withdrawal shows one percent and worker withdrawal shows five percent',
+    'customer withdrawal shows two percent and worker withdrawal shows eight percent',
     (t) async {
       seed();
       await t.pumpWidget(app(const WorkerWalletScreen()));
       await t.pump();
-      expect(find.text('Withdrawal fee (1%)'), findsWidgets);
+      expect(find.text('Withdrawal fee (2%)'), findsWidgets);
       await t.pumpWidget(const SizedBox());
       seed(role: 'worker');
       await t.pumpWidget(app(const WorkerWalletScreen()));
       await t.pump();
-      expect(find.text('Withdrawal fee (5%)'), findsWidgets);
+      expect(find.text('Withdrawal fee (8%)'), findsWidgets);
     },
   );
 }

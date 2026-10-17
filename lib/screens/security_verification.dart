@@ -134,7 +134,11 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         // Keep the created identity if mail delivery fails: retry sending,
         // rather than creating the same account a second time.
         setState(() => _pending = true);
-        await _send();
+        if (_signup) {
+          await _send();
+        } else {
+          _notice = 'Verify your email using the link sent when you signed up.';
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -373,9 +377,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       TextFormField(
                         controller: _email,
                         enabled: !_busy,
-                        keyboardType: _signup
-                            ? TextInputType.emailAddress
-                            : TextInputType.text,
+                        keyboardType: TextInputType.emailAddress,
                         autofillHints: [
                           _signup
                               ? AutofillHints.email
@@ -383,9 +385,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                         ],
                         decoration: InputDecoration(
                           labelText: tr(
-                            _signup
-                                ? 'Email address'
-                                : 'Email or verified mobile number',
+                            _signup ? 'Email address' : 'Email address',
                           ),
                         ),
                         validator: (v) {

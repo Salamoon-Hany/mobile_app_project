@@ -1,3 +1,4 @@
+import {AdminAlerts} from './admin-alerts.mjs';
 import {readJson,safeFailure,assertPublicOutput,RequestLimiter} from './security.mjs';
 import {validatedPhoto} from './photo-validation.mjs';
 import {ServiceExperience, appointment} from './service-experience.mjs';
@@ -98,7 +99,7 @@ export class MarketplaceRepository {
  async snapshot(uid){
   const account=await this.account(uid);if(!account)failure('ACCOUNT_REQUIRED',409);
   const rows=await this.db.prepare(`SELECT o.id,o.customer_uid,o.worker_uid,o.request_id,o.services,o.amount,o.details,o.location,o.scheduled_at,o.status,o.created_at,o.updated_at,(o.photo IS NOT NULL) AS has_photo,c.name AS customer_name,COALESCE(NULLIF(c.contact_phone,''),c.phone) AS customer_phone,w.name AS worker_name FROM marketplace_orders o JOIN marketplace_accounts c ON c.uid=o.customer_uid JOIN marketplace_accounts w ON w.uid=o.worker_uid WHERE o.customer_uid=? OR o.worker_uid=? ORDER BY o.created_at DESC LIMIT 1000`).bind(uid,uid).all();
-  const deposits=await this.db.prepare('SELECT request_id AS id,amount,method FROM marketplace_deposits WHERE uid=? ORDER BY created_at DESC LIMIT 1000').bind(uid).all();
+  const deposits=await this.db.prepare("SELECT d.request_id AS id,d.amount,d.method,COALESCE(l.fee,(d.amount+50)/100) AS fee FROM marketplace_deposits d LEFT JOIN platform_fee_history l ON l.source_type='deposit' AND l.uid=d.uid AND l.request_id=d.request_id WHERE d.uid=? ORDER BY d.created_at DESC LIMIT 1000").bind(uid).all();
   const withdrawals=await this.db.prepare('SELECT request_id AS id,amount,fee,net,fee_bps,role,mode,method,destination,status,created_at,updated_at,review_state,note AS review_note FROM wallet_withdrawal_history WHERE uid=? ORDER BY created_at DESC LIMIT 1000').bind(uid).all();
   return {withdrawals:withdrawals.results,...await this.customerSettings(uid),account:{uid:account.uid,role:account.role,name:account.name,phone:account.phone,contact_phone:account.contact_phone,gender:account.gender,national_id_last4:account.national_id_last4,available:account.available,photo:account.photo,balance:account.balance,created_at:account.created_at,skills:JSON.parse(account.skills),legacy_orders:JSON.parse(account.legacy_orders)},orders:rows.results.map(o=>({...o,services:JSON.parse(o.services),location:JSON.parse(o.location)})),deposits:[...JSON.parse(account.legacy_receipts),...deposits.results]};
  }
@@ -249,6 +250,7 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    if(!isAdmin&&route.startsWith('/admin'))failure('FORBIDDEN',403);
    if(!isAdmin&&route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
    if(route==='/admin'&&request.method==='GET'){if(!isAdmin)failure('FORBIDDEN',403);data=await experience.adminSnapshot();}
+   else if(route==='/admin/notifications/read'&&request.method==='POST'){await new AdminAlerts(repository.db).read(user.localId,body);data=await experience.adminSnapshot();}
    else if(route==='/admin/decision'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);await experience.adminDecision(user.localId,body,{allowDemoFunds});data=await experience.adminSnapshot();}
    else if(route==='/admin/photo'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);const row=await repository.db.prepare('SELECT photo FROM order_complaints WHERE id=?').bind(body.id).first();if(!row)failure('NOT_FOUND',404);data={photo:row.photo};}
    else if(route==='/quotes'&&request.method==='POST'){await experience.requestQuote(user.localId,body);data=await repository.snapshot(user.localId);}
@@ -288,6 +290,7 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    else if(route==='/orders'&&request.method==='POST'){await repository.createOrder(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/orders\/[^/]+\/decision$/.test(route)&&request.method==='POST'){await repository.decide(user.localId,route.split('/')[2],body.action);data=await repository.snapshot(user.localId);}
    else failure('NOT_FOUND',404);
+   if(isAdmin&&data?.summary)data.notifications=await new AdminAlerts(repository.db).list(user.localId);
    if(!isAdmin&&route!=='/account/delete')await repository.finance.touch(user,['/signup-role','/bootstrap'].includes(route)?body.role:undefined);
    if(data?.account){data.workerApplicationRequested=data.account.role==='customer'&&(await repository.db.prepare('SELECT requested_role FROM account_activity WHERE uid=?').bind(user.localId).first())?.requested_role==='worker';data.isAdmin=isAdmin;data.quotes=await experience.quotes(user.localId);data.notices=await experience.notices(user.localId);}
    assertPublicOutput(data);

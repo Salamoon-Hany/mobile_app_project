@@ -22,7 +22,7 @@ String egp(int piasters) => AppLanguage.isArabic
     : 'EGP ${(piasters / 100).toStringAsFixed(2)}';
 
 class DepositQuote {
-  DepositQuote(this.amountPiasters) {
+  DepositQuote(this.amountPiasters, {this.recordedFeePiasters}) {
     if (amountPiasters < 1000) {
       throw const FormatException('Minimum deposit is 10 pounds.');
     }
@@ -50,7 +50,9 @@ class DepositQuote {
     );
   }
   final int amountPiasters;
-  int get feePiasters => (amountPiasters + 50) ~/ 100;
+  final int? recordedFeePiasters;
+  int get feePiasters =>
+      recordedFeePiasters ?? (amountPiasters * 2 + 50) ~/ 100;
   int get totalPiasters => amountPiasters + feePiasters;
 }
 
@@ -73,7 +75,7 @@ class DepositReceipt {
       '${tr('Deposit receipt')}\n\n'
       '${tr('Deposit confirmed')}: ${egp(quote.amountPiasters)}\n'
       '${tr('Payment method')}: ${tr(method.label)}\n'
-      '${tr('Service fee (1%)')}: ${egp(quote.feePiasters)}\n'
+      '${tr(quote.feePiasters == (quote.amountPiasters + 50) ~/ 100 ? 'Service fee (1%)' : 'Service fee (2%)')}: ${egp(quote.feePiasters)}\n'
       '${tr('Total to pay')}: ${egp(quote.totalPiasters)}\n'
       '${tr('Email')}: $email\n${tr('Reference')}: $id';
 }
@@ -91,6 +93,7 @@ class WalletState extends ChangeNotifier {
         {
           'id': receipt.id,
           'amount': receipt.quote.amountPiasters,
+          'fee': receipt.quote.feePiasters,
           'method': receipt.method.name,
           'email': receipt.email,
         },
@@ -106,7 +109,11 @@ class WalletState extends ChangeNotifier {
       final row = Map<String, dynamic>.from(value as Map);
       final receipt = DepositReceipt(
         id: row['id'] as String,
-        quote: DepositQuote(row['amount'] as int),
+        quote: DepositQuote(
+          row['amount'] as int,
+          recordedFeePiasters:
+              row['fee'] as int? ?? ((row['amount'] as int) + 50) ~/ 100,
+        ),
         method: DepositMethod.values.byName(row['method'] as String),
         email: row['email'] as String,
         demo: true,

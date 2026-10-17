@@ -1,10 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../models/phone_number.dart';
 import 'phone_login_service.dart';
 
-String normalizeLoginIdentifier(String input) =>
-    input.contains('@') ? normalizeEmail(input) : normalizePhone(input);
+String normalizeLoginIdentifier(String input) => normalizeEmail(input);
 
 String normalizeEmail(String input) {
   final email = input.trim().toLowerCase();
@@ -35,31 +33,6 @@ class VerificationService {
   }
 
   Future<void> logIn(String email, String password) async {
-    if (!email.contains('@')) {
-      final phone = normalizePhone(email);
-      final service = _phoneLogin ?? PhoneLoginService();
-      try {
-        final account = await service.resolve(phone, password);
-        final result = await _auth.signInWithEmailAndPassword(
-          email: account.email,
-          password: password,
-        );
-        final user = result.user;
-        if (user == null ||
-            user.uid != account.uid ||
-            user.phoneNumber != phone ||
-            !user.emailVerified ||
-            user.isAnonymous) {
-          await _auth.signOut();
-          throw const FormatException(
-            'Email or mobile number and password are incorrect.',
-          );
-        }
-      } finally {
-        if (_phoneLogin == null) service.dispose();
-      }
-      return;
-    }
     final normalized = normalizeEmail(email);
     final service = _phoneLogin ?? PhoneLoginService();
     try {
@@ -70,10 +43,13 @@ class VerificationService {
         email: normalized,
         password: password,
       );
+      await result.user?.reload();
+      if (_auth.currentUser?.emailVerified == true)
+        await _auth.currentUser!.getIdToken(true);
       if (checked != null && result.user?.uid != checked.uid) {
         await _auth.signOut();
         throw const FormatException(
-          'Email or mobile number and password are incorrect.',
+          'Email or password is incorrect. Sign up if you need an account.',
         );
       }
     } finally {
@@ -104,7 +80,7 @@ class VerificationService {
       const safe = {
         'Enter a valid email address.',
         'Enter a valid phone number with country code.',
-        'Email or mobile number and password are incorrect.',
+        'Email or password is incorrect. Sign up if you need an account.',
         'Too many requests. Please wait before trying again.',
         'Mobile login is temporarily unavailable. Sign in with your email or try again.',
         'Sign in is temporarily unavailable. Please retry later.',

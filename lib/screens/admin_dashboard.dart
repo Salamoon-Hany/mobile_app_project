@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../widgets/notification_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -12,10 +14,13 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminState();
 }
 
-class _AdminState extends State<AdminScreen> {
+class _AdminState extends State<AdminScreen>
+    with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _data;
   String? _error;
-  bool _busy = false, _loading = false, _demo = true;
+  bool _busy = false, _loading = false;
+  late final TabController _tabsController;
+  Timer? _poll;
   static const _tabs = [
     'Overview',
     'Platform wallet',
@@ -29,11 +34,26 @@ class _AdminState extends State<AdminScreen> {
   @override
   void initState() {
     super.initState();
+    _tabsController = TabController(length: _tabs.length, vsync: this);
+    _tabsController.addListener(_tabChanged);
     _load();
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _tabsController.dispose();
+    super.dispose();
+  }
+
+  void _tabChanged() {
+    if (!_tabsController.indexIsChanging)
+      _markSection(_tabs[_tabsController.index]);
   }
 
   Future<void> _load() async {
-    if (_loading || !Marketplace.shared.isAdmin) return;
+    if (_loading || _busy || !Marketplace.shared.isAdmin) return;
     _loading = true;
     try {
       final d = await Marketplace.shared.request('admin');
@@ -47,6 +67,74 @@ class _AdminState extends State<AdminScreen> {
       if (mounted) setState(() => _error = _message(e));
     } finally {
       _loading = false;
+    }
+  }
+
+  Map<String, dynamic> get _notifications =>
+      Map<String, dynamic>.from(_data?['notifications'] as Map? ?? {});
+  int _count(String section) =>
+      ((_notifications['counts'] as Map?)?[section] as num?)?.toInt() ?? 0;
+  Future<void> _markSection(String section) async {
+    if (_count(section) == 0) return;
+    try {
+      final data = await Marketplace.shared.request(
+        'admin/notifications/read',
+        body: {'section': section},
+      );
+      if (mounted) setState(() => _data = data);
+    } catch (e) {
+      if (mounted) setState(() => _error = _message(e));
+    }
+  }
+
+  Future<void> _openAlerts() async {
+    final items = List<Map<String, dynamic>>.from(
+      (_notifications['items'] as List? ?? []).map(
+        (n) => Map<String, dynamic>.from(n as Map),
+      ),
+    );
+    final section = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(c).height * 0.65,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              const AppText(
+                'Notifications',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              if (items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: AppText('No Notifications'),
+                ),
+              for (final n in items)
+                ListTile(
+                  leading: NotificationBadge(
+                    count: n['read'] == true ? 0 : 1,
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                  title: AppText(n['title'] as String),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(n['body'] as String),
+                      Text(_date(n['at'])),
+                    ],
+                  ),
+                  onTap: () => Navigator.pop(c, n['section'] as String),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (section != null && mounted) {
+      _tabsController.animateTo(_tabs.indexOf(section));
+      await _markSection(section);
     }
   }
 
@@ -84,16 +172,10 @@ class _AdminState extends State<AdminScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: AppText(
-          action == 'paid' ? 'Record withdrawal completion?' : action,
-        ),
+        title: AppText(action == 'paid' ? 'Complete withdrawal?' : action),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (action == 'paid')
-              const AppText(
-                'This updates the withdrawal record only. No money is transferred.',
-              ),
             TextField(
               controller: input,
               maxLength: 1000,
@@ -140,7 +222,6 @@ class _AdminState extends State<AdminScreen> {
           _error = null;
         });
       }
-      await Marketplace.shared.refresh();
     } catch (e) {
       if (mounted) setState(() => _error = _message(e));
     } finally {
@@ -241,8 +322,10 @@ class _AdminState extends State<AdminScreen> {
           'Pending withdrawals',
           '${_value(summary, 'pendingWithdrawals')}',
         ),
-        _stat('Platform balance', egp(_value(p, 'balance'))),
-        _stat('Recorded platform balance', egp(_value(p, 'demoBalance'))),
+        _stat(
+          'Platform balance',
+          egp(_value(p, 'balance') + _value(p, 'demoBalance')),
+        ),
       ]),
       _heading('Monthly registrations'),
       for (final r in _rows('registrations'))
@@ -258,25 +341,20 @@ class _AdminState extends State<AdminScreen> {
 
   Widget _wallet() {
     final p = Map<String, dynamic>.from(_data?['platform'] as Map? ?? {});
-    final ledger = _rows(
-      'ledger',
-    ).where((r) => r['mode'] == (_demo ? 'demo' : 'live')).toList();
+    final ledger = _rows('ledger');
     return _list([
       _heading('Platform wallet'),
       _grid([
-        _stat('Platform balance', egp(_value(p, 'balance'))),
-        _stat('Recorded platform balance', egp(_value(p, 'demoBalance'))),
-        _stat('Earnings this month', egp(_value(p, 'monthlyEarnings'))),
         _stat(
-          'Recorded earnings this month',
-          egp(_value(p, 'monthlyDemoEarnings')),
+          'Platform balance',
+          egp(_value(p, 'balance') + _value(p, 'demoBalance')),
+        ),
+        _stat(
+          'Earnings this month',
+          egp(_value(p, 'monthlyEarnings') + _value(p, 'monthlyDemoEarnings')),
         ),
       ]),
       const SizedBox(height: 16),
-      const AppText(
-        'Recorded balances are bookkeeping entries and are not available for withdrawal.',
-      ),
-      const SizedBox(height: 10),
       AppText(
         '${tr('Fees awaiting settlement')}: ${egp(_value(p, 'pendingFees'))}',
       ),
@@ -284,21 +362,6 @@ class _AdminState extends State<AdminScreen> {
         'Pending and cancelled withdrawals are not included in earnings.',
       ),
       const SizedBox(height: 16),
-      Wrap(
-        spacing: 10,
-        children: [
-          ChoiceChip(
-            label: const AppText('Recorded transactions'),
-            selected: _demo,
-            onSelected: (_) => setState(() => _demo = true),
-          ),
-          ChoiceChip(
-            label: const AppText('Real payments'),
-            selected: !_demo,
-            onSelected: (_) => setState(() => _demo = false),
-          ),
-        ],
-      ),
       _heading('Fee transactions'),
       if (ledger.isEmpty) const AppText('No fee transactions yet.'),
       for (final r in ledger)
@@ -365,7 +428,6 @@ class _AdminState extends State<AdminScreen> {
   ]);
   Widget _withdrawals() => _list([
     _heading('Withdrawal requests'),
-    const AppText('Review reserves the request; it does not send money.'),
     if (_rows('withdrawals').isEmpty) const AppText('Nothing to review yet'),
     for (final r in _rows('withdrawals'))
       _panel([
@@ -380,9 +442,6 @@ class _AdminState extends State<AdminScreen> {
         ),
         Text('${tr('You receive')}: ${egp(r['net'] as int)}'),
         SelectableText(r['destination'] as String),
-        AppText(
-          r['mode'] == 'demo' ? 'Recorded transactions' : 'Real payments',
-        ),
         AppText(r['status'] as String),
         AppText(r['review_state'] as String),
         if ((r['note'] as String).isNotEmpty) Text(r['note'] as String),
@@ -402,7 +461,7 @@ class _AdminState extends State<AdminScreen> {
                   onPressed: _busy
                       ? null
                       : () => _decision('withdrawal', r, 'paid'),
-                  child: const AppText('Record withdrawal completion'),
+                  child: const AppText('Complete withdrawal'),
                 ),
               TextButton(
                 onPressed: _busy
@@ -506,11 +565,7 @@ class _AdminState extends State<AdminScreen> {
         subtitle: Text(
           '${tr(r['name'] as String)} • ${_date(r['created_at'])}',
         ),
-        trailing: r['amount'] == null
-            ? null
-            : Text(
-                '${egp(r['amount'] as int)}\n${tr(r['mode'] == 'demo' ? 'Recorded transactions' : 'Real payments')}',
-              ),
+        trailing: r['amount'] == null ? null : Text(egp(r['amount'] as int)),
       ),
     for (final r in _rows('audit'))
       ListTile(
@@ -529,67 +584,85 @@ class _AdminState extends State<AdminScreen> {
         body: const Center(child: AppText('Access denied')),
       );
     }
-    return DefaultTabController(
-      length: _tabs.length,
-      child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const AppText('Admin panel'),
-          actions: [
-            const AuthLanguageButton(),
-            IconButton(
-              onPressed: _busy ? null : _logout,
-              icon: const Icon(Icons.logout),
-              tooltip: tr('Log out'),
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const AppText('Admin panel'),
+        actions: [
+          IconButton(
+            tooltip: tr('Notifications'),
+            onPressed: _openAlerts,
+            icon: NotificationBadge(
+              count: (_notifications['unreadCount'] as num?)?.toInt() ?? 0,
+              child: const Icon(Icons.notifications_outlined),
             ),
-            IconButton(
-              onPressed: _busy ? null : _load,
-              icon: const Icon(Icons.refresh),
-              tooltip: tr('Refresh'),
-            ),
-          ],
-          bottom: TabBar(
-            isScrollable: true,
-            tabs: [for (final label in _tabs) Tab(child: AppText(label))],
           ),
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
-            child: Column(
-              children: [
-                if (_busy) const LinearProgressIndicator(),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Expanded(child: AppText(_error!)),
-                        TextButton(
-                          onPressed: _load,
-                          child: const AppText('Retry'),
-                        ),
-                      ],
-                    ),
+          const AuthLanguageButton(),
+          IconButton(
+            onPressed: _busy ? null : _logout,
+            icon: const Icon(Icons.logout),
+            tooltip: tr('Log out'),
+          ),
+          IconButton(
+            onPressed: _busy ? null : _load,
+            icon: const Icon(Icons.refresh),
+            tooltip: tr('Refresh'),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabsController,
+          isScrollable: true,
+          tabs: [
+            for (final label in _tabs)
+              Tab(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: NotificationBadge(
+                    count: _count(label),
+                    child: AppText(label),
                   ),
-                Expanded(
-                  child: _data == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : TabBarView(
-                          children: [
-                            _overview(),
-                            _wallet(),
-                            _applications(),
-                            _withdrawals(),
-                            _orders(),
-                            _accounts(),
-                            _complaints(),
-                            _audit(),
-                          ],
-                        ),
                 ),
-              ],
-            ),
+              ),
+          ],
+        ),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
+          child: Column(
+            children: [
+              if (_busy) const LinearProgressIndicator(),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(child: AppText(_error!)),
+                      TextButton(
+                        onPressed: _load,
+                        child: const AppText('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: _data == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : TabBarView(
+                        controller: _tabsController,
+                        children: [
+                          _overview(),
+                          _wallet(),
+                          _applications(),
+                          _withdrawals(),
+                          _orders(),
+                          _accounts(),
+                          _complaints(),
+                          _audit(),
+                        ],
+                      ),
+              ),
+            ],
           ),
         ),
       ),
