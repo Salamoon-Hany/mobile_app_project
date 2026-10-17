@@ -13,7 +13,7 @@ import 'phone_verification_test.dart' show PhoneUser;
 
 void main() {
   test(
-    'minimum, decimal validation, Arabic digits and 1% fees use exact piasters',
+    'minimum, decimal validation, Arabic digits and 2% fees use exact piasters',
     () {
       for (final input in [
         '',
@@ -29,13 +29,13 @@ void main() {
         expect(() => DepositQuote.parse(input), throwsFormatException);
       }
       final minimum = DepositQuote.parse('10');
-      expect(minimum.feePiasters, 10);
-      expect(minimum.totalPiasters, 1010);
+      expect(minimum.feePiasters, 20);
+      expect(minimum.totalPiasters, 1020);
       final quote = DepositQuote.parse('١٠٠٫٠٠');
       expect(quote.amountPiasters, 10000);
-      expect(quote.feePiasters, 100);
-      expect(quote.totalPiasters, 10100);
-      expect(DepositQuote.parse('10.50').feePiasters, 11);
+      expect(quote.feePiasters, 200);
+      expect(quote.totalPiasters, 10200);
+      expect(DepositQuote.parse('10.50').feePiasters, 21);
     },
   );
   test('demo credits amount only once and clears on account switch', () async {
@@ -101,7 +101,7 @@ void main() {
       expect(state.balancePiasters, 0);
     },
   );
-  testWidgets('under 10 rejected; 100 shows 101 and confirms demo credit', (
+  testWidgets('under 10 rejected; 100 shows 102 and confirms demo credit', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(800, 1400);
@@ -127,7 +127,7 @@ void main() {
     expect(state.balancePiasters, 0);
     await tester.enterText(find.byKey(const Key('deposit-amount')), '100');
     await tester.pump();
-    expect(find.text('EGP 101.00'), findsOneWidget);
+    expect(find.text('EGP 102.00'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Add funds'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm deposit'));

@@ -1,48 +1,61 @@
 # سند | SANAD
 
-Flutter home-services application with complete Flutter source in .
+A Flutter services marketplace with separate customer, worker and administrator interfaces.
 
-Eleven original services retain their original images. Cleaning, air conditioning
-and painting are removed. Settings contains Balance, Language, Dark mode, a
-divider, Contact us and Logout, in that order. The header opens Profile directly
-and shows the saved account photo (or a profile icon).
+## Current release
 
-Email/password registration remains primary. A mobile number verified in Profile
-can sign in with the same password and Firebase UID. A small hosted Worker verifies
-Firebase credentials and keeps a private phone/email/UID index in D1. Passwords
-are never stored. Existing verified numbers register automatically after opening
-the updated app signed in, or signing in with email once. See
-docs/PHONE_PASSWORD_LOGIN.md.
+- Owner-private hosted version: 33 at https://eslam-mobile-service-app.eslam-hanyram11.chatgpt.site/
+- Customer navigation: Home, Orders, Notifications, Settings.
+- Worker navigation: Home, Jobs, Activity & alerts, Settings. Wallet is in Settings and the home shortcut.
+- Standalone administrator UI: combined platform balance/monthly earnings, account/job statistics, applications, withdrawal review, complaints, audit history and persisted notification badges.
+- Administrator and support: Sanad.infoo@gmail.com / 01095069208.
+- New customer deposits/withdrawals charge 2%; new worker withdrawals charge 8%. Migration 0008 preserves existing quoted amounts/rates and historical fees.
+- Email/password-only sign-in. Verified returning users reload their Firebase status/token and enter directly. Signup verification remains required. Phone is profile contact information.
 
-Customer and Worker roles now open separate interfaces. Registered workers choose
-their services; orders, balances and receipts synchronize through private D1
-records between the owning customer and assigned worker. Existing local records
-import once from their original device; old unassigned orders remain archived. Deposits
-do not charge a real payment provider or send a receipt email. The 3.7-second
-launch and saved Arabic/English preference remain in place. Automatic order responses are removed. Pending orders wait for the worker;
-accept/reject and customer-confirmed completion drive the atomic ledger. See
-docs/MARKETPLACE.md for camera, migration and native setup limits.
+## Architecture
 
-Verification uses Flutter widget/unit tests, server/SQLite tests and a Web release
-build. Physical cameras and a two-account production login need device QA.
-Automated tests send no SMS or email and create no records in the owner account.
+Flutter/Dart source lives at the repository root. Firebase Authentication owns identity; Firestore `users/{uid}` stores the minimal verified-owner profile. The JavaScript Worker in `worker/` verifies Firebase tokens, enforces roles, and stores marketplace accounts, orders, balances, fees, messages, quotes, reviews, complaints and notification reads in D1 via the SQL migrations in `drizzle/`.
 
-Customer Settings now includes a saved worker-application form and an editable
-five-star app rating, restricted to customers. See
-docs/CUSTOMER_SETTINGS.md. This update passed 63 Flutter tests,
-31 server/database tests and a release Web build.
+`lib/services/marketplace_service.dart` uses authenticated HTTP snapshots and foreground polling, not FCM or WebSockets. `shared_preferences` stores language and account-isolated legacy local state; it is not the financial authority. Images are validated inline data in the current schema, not Firebase Storage uploads. GPS/search uses Geolocator and Photon.
 
+## Payment integration status
 
-Customer/worker profile completion, optional rating comments, auth language selection, account deletion and worker withdrawal requests (5% fee) are described in docs/ACCOUNT_WALLET_UPDATE.md. Withdrawals remain pending requests until an actual payout provider is integrated.
+The hosted application records project wallet operations under internal mode guards. It does not currently charge cards/mobile wallets, execute bank payouts or send deposit receipt emails. The optional Fawry checkout/webhook implementation in `functions/` is separate and requires merchant, mail and deployment configuration. The Trigger Email extension is a setup dependency for that optional path, not evidence of an installed active extension. Never enable live processing by removing labels or guards.
 
+## Structure
 
-## Latest synchronized release
+- `lib/screens/`, `lib/widgets/`: screens and shared visual components.
+- `lib/models/`, `lib/services/`, `lib/state/`, `lib/l10n/`: models, HTTP/Firebase/device adapters, state and translation.
+- `web/`: launch/onboarding shell, Firebase module bootstrap and Web assets.
+- `worker/`: production marketplace/auth API and HTTP security boundary.
+- `drizzle/`: SQLite/D1 schema migrations and migration journal.
+- `functions/`: optional Firebase/Fawry wallet backend.
+- `test/`, `worker/test/`, `rules_tests/`, `functions/test/`: validation layers.
+- `.github/workflows/validate.yml`: automated checks and reviewed release Web artifact.
 
-This source mirrors the deployed SANAD version 21 (Sites source commit 9be98c94bc36eefb4de5de8f8b7f42d1dc50e6bc). Flutter lives at the repository root. Worker API and schema migrations are in worker/ and drizzle/. The redesigned worker interface is described in docs/WORKER_UI.md.
+## Build and check
 
-Validation: 76 Flutter tests, 43 server/database tests, and a release Web build passed. Native camera/device QA remains outstanding.
+```bash
+flutter pub get
+flutter analyze --no-fatal-infos
+dart format lib test
+flutter test
+npm test
+node --test test/sanad_web_launch_test.mjs test/firebase_bootstrap_test.mjs
+flutter build web --release
+node scripts/build-sanad.mjs
+```
 
+The final command packages an existing Web build and Worker modules under `dist/`. Site identity and publishing require the selected Site's supported source/deployment workflow. This command alone does not deploy. Firebase Web configuration is supplied in `lib/firebase_options.dart`; native Android/iOS app registration still needs platform-specific Firebase setup.
 
-## Service experience release
+Rules/Functions integration checks additionally use Node dependencies, Java 21 and Firebase emulators; see `.github/workflows/validate.yml`. The latest feature validation run passed 98 Flutter tests, 95 Worker/SQLite tests, 12 Web tests, account/rules checks, Functions tests/audit and a release Web build: https://github.com/Salamoon-Hany/mobile_app_project/actions/runs/39068916516
 
-Added order chat/photos, completed-order worker reviews, private complaints and owner administration, appointments, price quotes and atomic extra-cost approval. See docs/SERVICE_EXPERIENCE.md. Validation: 81 Flutter tests, 55 server/SQLite tests, static analysis and Web release build passed. Foreground browser alerts are opt-in; closed-app push and real payouts are not integrated.
+The deployed Web artifact was SHA256-verified before packaging. Production checks confirmed verified admin email sign-in, admin session/dashboard and notification/totals schema; anonymous access is rejected. Physical camera/GPS and browser interaction QA remain separate checks.
+
+## Security and history
+
+Server authorization, parameterized queries, atomic balance changes, request idempotency, rate limits, input/photo validation, HTTPS/CSP and private hosting access remain enforced. No client API key, hidden UI element or client role flag grants admin permission. Server API keys stay outside source.
+
+Some earlier documents in `docs/` describe historical phone-login flows, fee rates and releases. Current source, migration 0008 and this README supersede those historical descriptions. The previous owner-authorized data reset was completed earlier; routine build/test/deploy commands must not invoke the operator reset helper.
+
+The existing pull request stays unmerged until the owner requests a merge.

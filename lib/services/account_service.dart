@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/profile_validation.dart';
+import 'marketplace_service.dart';
 
 enum AccountAction { login, signup }
 
@@ -25,6 +26,9 @@ class AccountService {
     }
     // Rules require a fresh email_verified claim, not just a client flag.
     await user!.getIdToken(true);
+    if (Marketplace.enabled && await Marketplace.shared.identify(user)) {
+      return;
+    }
     final ref = profile(user.uid);
     await FirebaseFirestore.instance.runTransaction((transaction) async {
       final existing = await transaction.get(ref);

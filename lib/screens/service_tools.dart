@@ -1,3 +1,5 @@
+import 'worker_wallet.dart';
+import '../widgets/notification_badge.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -7,6 +9,9 @@ import '../widgets/sanad_ui.dart';
 import '../models/wallet.dart';
 import '../services/marketplace_service.dart';
 import '../services/browser_alerts.dart' as alerts;
+import 'admin_dashboard.dart';
+import 'become_worker.dart';
+export 'admin_dashboard.dart' show AdminScreen;
 
 String friendlyError(Object e) => e is FormatException
     ? e.message
@@ -72,13 +77,24 @@ class ServiceTools extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
+      if (Marketplace.shared.workerApplicationRequested &&
+          Marketplace.shared.workerApplication == null)
+        ListTile(
+          leading: const Icon(Icons.assignment_ind_outlined),
+          title: const AppText('Complete worker application'),
+          subtitle: const AppText('Admin approval is required before working.'),
+          onTap: () => open(context, const BecomeWorkerScreen()),
+        ),
       ListTile(
         leading: const Icon(Icons.request_quote_outlined),
         title: const AppText('Price quotes'),
         onTap: () => open(context, const QuotesScreen()),
       ),
       ListTile(
-        leading: const Icon(Icons.notifications_outlined),
+        leading: NotificationBadge(
+          count: Marketplace.shared.unreadCount,
+          child: const Icon(Icons.notifications_outlined),
+        ),
         title: const AppText('Activity & alerts'),
         onTap: () => open(context, const ActivityScreen()),
       ),
@@ -1012,6 +1028,8 @@ class ActivityScreen extends StatelessWidget {
                           ? 'New message'
                           : n['kind'] == 'quote'
                           ? 'Price quote'
+                          : n['kind'] == 'withdrawal'
+                          ? 'Withdrawal request'
                           : n['kind'] == 'complaint'
                           ? 'Support update'
                           : 'Order update',
@@ -1036,7 +1054,9 @@ class ActivityScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => n['kind'] == 'quote'
+                            builder: (_) => n['kind'] == 'withdrawal'
+                                ? const WorkerWalletScreen()
+                                : n['kind'] == 'quote'
                                 ? const QuotesScreen()
                                 : OrderActivityScreen(
                                     orderId: n['target'] as String,
@@ -1057,323 +1077,6 @@ class ActivityScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
-  @override
-  State<AdminScreen> createState() => _AdminState();
-}
-
-class _AdminState extends State<AdminScreen> {
-  Map<String, dynamic>? _data;
-  String? _error;
-  bool _busy = false;
-  int _tab = 0;
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final d = await Marketplace.shared.request('admin');
-      if (mounted) {
-        setState(() {
-          _data = d;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = friendlyError(e));
-    }
-  }
-
-  Future<void> _decision(String kind, Map row, String action) async {
-    final c = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: AppText(action),
-        content: TextField(
-          controller: c,
-          maxLength: 1000,
-          minLines: 2,
-          maxLines: 4,
-          decoration: InputDecoration(labelText: tr('Support note')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const AppText('Back'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const AppText('Confirm'),
-          ),
-        ],
-      ),
-    );
-    final note = c.text;
-    c.dispose();
-    if (ok != true || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      final d = await Marketplace.shared.request(
-        'admin/decision',
-        body: {
-          'kind': kind,
-          'id': kind == 'application'
-              ? row['uid']
-              : kind == 'withdrawal'
-              ? row['request_id']
-              : row['id'],
-          'uid': row['uid'],
-          'decision': action,
-          'note': note,
-        },
-      );
-      if (mounted) setState(() => _data = d);
-      await Marketplace.shared.refresh();
-    } catch (e) {
-      if (mounted) setState(() => _error = friendlyError(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    AppLanguage.watch(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const AppText('Admin panel'),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Column(
-            children: [
-              SanadTabs(
-                labels: const [
-                  'Complaints',
-                  'Applications',
-                  'Withdrawals',
-                  'Activity log',
-                ],
-                selected: _tab,
-                onSelect: (v) => setState(() => _tab = v),
-              ),
-              if (_busy) const LinearProgressIndicator(),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: AppText(_error!),
-                ),
-              Expanded(
-                child: _data == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView(
-                        padding: const EdgeInsets.all(20),
-                        children: [
-                          if ((_data![_tab == 0
-                                      ? 'complaints'
-                                      : _tab == 1
-                                      ? 'applications'
-                                      : _tab == 2
-                                      ? 'withdrawals'
-                                      : 'audit']
-                                  as List)
-                              .isEmpty)
-                            const AppText('Nothing to review yet'),
-                          if (_tab == 0)
-                            for (final r in _data!['complaints'] as List)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: SanadPanel(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      AppText(
-                                        r['reason'] as String,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(r['body'] as String),
-                                      AppText(r['status'] as String),
-                                      Text(r['reply'] as String),
-                                      if (r['has_photo'] == 1)
-                                        TextButton(
-                                          onPressed: () => showServicePhoto(
-                                            context,
-                                            'complaint',
-                                            r['id'] as String,
-                                            admin: true,
-                                          ),
-                                          child: const AppText('View Picture'),
-                                        ),
-                                      if (r['status'] == 'open')
-                                        FilledButton(
-                                          onPressed: _busy
-                                              ? null
-                                              : () => _decision(
-                                                  'complaint',
-                                                  Map<String, dynamic>.from(
-                                                    r as Map,
-                                                  ),
-                                                  'resolved',
-                                                ),
-                                          child: const AppText(
-                                            'Reply & resolve',
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          if (_tab == 1)
-                            for (final r in _data!['applications'] as List)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: SanadPanel(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        r['full_name'] as String,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(r['phone'] as String),
-                                      Text(r['email'] as String),
-                                      Text(r['work_types'] as String),
-                                      AppText(r['status'] as String),
-                                      if (r['status'] == 'pending')
-                                        Wrap(
-                                          spacing: 12,
-                                          children: [
-                                            for (final a in [
-                                              'approved',
-                                              'rejected',
-                                            ])
-                                              TextButton(
-                                                onPressed: _busy
-                                                    ? null
-                                                    : () => _decision(
-                                                        'application',
-                                                        Map<
-                                                          String,
-                                                          dynamic
-                                                        >.from(r as Map),
-                                                        a,
-                                                      ),
-                                                child: AppText(a),
-                                              ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          if (_tab == 2) ...[
-                            const AppText(
-                              'Review payout requests and their account details.',
-                            ),
-                            const SizedBox(height: 16),
-                            for (final r in _data!['withdrawals'] as List)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: SanadPanel(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        r['name'] as String,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(egp(r['amount'] as int)),
-                                      Text(
-                                        '${tr('Withdrawal fee (5%)')}: ${egp(r['fee'] as int)}',
-                                      ),
-                                      Text(
-                                        '${tr('You receive')}: ${egp(r['net'] as int)}',
-                                      ),
-                                      Text(r['destination'] as String),
-                                      AppText(r['status'] as String),
-                                      AppText(r['review_state'] as String),
-                                      if (r['note'] != null)
-                                        Text(r['note'] as String),
-                                      if (r['status'] == 'pending' &&
-                                          r['review_state'] == 'pending')
-                                        Wrap(
-                                          spacing: 12,
-                                          children: [
-                                            TextButton(
-                                              onPressed: _busy
-                                                  ? null
-                                                  : () => _decision(
-                                                      'withdrawal',
-                                                      Map<String, dynamic>.from(
-                                                        r as Map,
-                                                      ),
-                                                      'reviewed',
-                                                    ),
-                                              child: const AppText(
-                                                'Mark reviewed',
-                                              ),
-                                            ),
-                                            TextButton(
-                                              onPressed: _busy
-                                                  ? null
-                                                  : () => _decision(
-                                                      'withdrawal',
-                                                      Map<String, dynamic>.from(
-                                                        r as Map,
-                                                      ),
-                                                      'rejected',
-                                                    ),
-                                              child: const AppText(
-                                                'Reject & refund',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                          if (_tab == 3)
-                            for (final r in _data!['audit'] as List)
-                              ListTile(
-                                title: AppText(r['decision'] as String),
-                                subtitle: Text(
-                                  '${r['kind']} • ${localTime(r['created_at'])}\n${r['note']}',
-                                ),
-                              ),
-                        ],
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

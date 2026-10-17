@@ -50,17 +50,16 @@ export function createPhoneHandler({repository,apiKey,fetchImpl=fetch,now=Date.n
    if(url.pathname==='/api/auth/phone/register'){
     const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1];const user=await lookup(token,true);await repository.save(user);return Response.json({registered:true},{headers:{'Cache-Control':'no-store'}});
    }
-   if(!['/api/auth/login','/api/auth/phone/login'].includes(url.pathname))problem('NOT_FOUND',404);
-   const raw=url.pathname==='/api/auth/login'?body.identifier:body.phone;
+   if(url.pathname!=='/api/auth/login')problem('NOT_FOUND',404);
+   const raw=body.identifier;
    if(typeof raw!=='string'||raw.length>254||typeof body.password!=='string'||!body.password||body.password.length>4096)problem('INVALID_REQUEST');
-   const emailLogin=raw.includes('@'),identifier=emailLogin?raw.trim().toLowerCase():normalizePhone(raw);
-   if(emailLogin&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))problem('INVALID_REQUEST');
+   const identifier=raw.trim().toLowerCase();
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))problem('INVALID_REQUEST');
    await limit('login-ip',ip,120,900000);await limit('login-identifier',identifier,5,900000);
-   const alias=emailLogin?null:await repository.find(identifier);if(!emailLogin&&!alias)problem('INVALID_CREDENTIALS',401);
-   const email=emailLogin?identifier:alias.email;
+   const email=identifier;
    const signed=await firebase('signInWithPassword',{email,password:body.password,returnSecureToken:true});
-   const current=await lookup(signed.idToken,!emailLogin);
-   if(current.email.toLowerCase()!==email.toLowerCase()||(!emailLogin&&(current.localId!==alias.uid||current.phoneNumber!==identifier)))problem('INVALID_CREDENTIALS',401);
+   const current=await lookup(signed.idToken,false);
+   if(current.email.toLowerCase()!==email.toLowerCase())problem('INVALID_CREDENTIALS',401);
    await clear('login-identifier',identifier);
    const output={email:current.email,uid:current.localId};assertPublicOutput(output);return Response.json(output,{headers:{'Cache-Control':'no-store'}});
   }catch(error){return safeFailure(error,request);}

@@ -1,4 +1,5 @@
 import {LaunchState} from './sanad-launch-state.mjs';
+import {preloadFirebase} from './firebase-bootstrap.mjs';
 const seenKey = 'sanad.onboarding.v1';
 let seen = false;
 try { seen = localStorage.getItem(seenKey) === 'done'; } catch (_) { /* Storage can be disabled. */ }
@@ -111,9 +112,11 @@ byId('retry').addEventListener('click', () => location.reload());
 window.sanadEngineReady = () => { state.engineReady(); clearTimeout(timeout); update(); };
 window.sanadEngineError = () => { state.engineError(); clearTimeout(timeout); update(); };
 setTimeout(() => { state.minElapsed = true; update(); }, reducedMotion ? 150 : 2700);
-const bootstrap = document.createElement('script');
-bootstrap.src = 'flutter_bootstrap.js';
-bootstrap.async = true;
-bootstrap.addEventListener('error', window.sanadEngineError);
-document.body.appendChild(bootstrap);
+preloadFirebase().then(() => {
+  const bootstrap = document.createElement('script');
+  bootstrap.src = 'flutter_bootstrap.js';
+  bootstrap.async = true;
+  bootstrap.addEventListener('error', window.sanadEngineError);
+  document.body.appendChild(bootstrap);
+}).catch(window.sanadEngineError);
 // First launch slides remain usable while the app engine loads in the background.

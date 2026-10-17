@@ -1,3 +1,4 @@
+import '../widgets/notification_badge.dart';
 import '../l10n/app_language.dart';
 import '../services/marketplace_service.dart';
 import '../services/camera_capture.dart';
@@ -207,33 +208,45 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          type: BottomNavigationBarType.fixed,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          items: [
-            BottomNavigationBarItem(
-              icon: ReferenceIcon('home', muted: _selectedIndex != 0),
-              label: tr('Home'),
-            ),
-            BottomNavigationBarItem(
-              icon: const ReferenceIcon('orders', muted: true),
-              activeIcon: const ReferenceIcon('orders-active'),
-              label: tr('Orders'),
-            ),
-            BottomNavigationBarItem(
-              icon: ReferenceIcon('bell', muted: _selectedIndex != 2),
-              label: tr('Notifications'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: tr('Settings'),
-            ),
-          ],
+        bottomNavigationBar: AnimatedBuilder(
+          animation: Marketplace.shared,
+          builder: (context, _) => BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            type: BottomNavigationBarType.fixed,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            items: [
+              BottomNavigationBarItem(
+                icon: ReferenceIcon('home', muted: _selectedIndex != 0),
+                label: tr('Home'),
+              ),
+              BottomNavigationBarItem(
+                icon: NotificationBadge(
+                  count: Marketplace.shared.unreadOrderCount,
+                  child: const ReferenceIcon('orders', muted: true),
+                ),
+                activeIcon: NotificationBadge(
+                  count: Marketplace.shared.unreadOrderCount,
+                  child: const ReferenceIcon('orders-active'),
+                ),
+                label: tr('Orders'),
+              ),
+              BottomNavigationBarItem(
+                icon: NotificationBadge(
+                  count: Marketplace.shared.unreadCount,
+                  child: ReferenceIcon('bell', muted: _selectedIndex != 2),
+                ),
+                label: tr('Notifications'),
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.settings),
+                label: tr('Settings'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -679,7 +692,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(height: 12),
                       AppText(
-                        '+20 123 456 7890',
+                        '01095069208',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -698,7 +711,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(height: 12),
                       AppText(
-                        'El.Ostaz.Company@Gmail.com',
+                        'Sanad.infoo@gmail.com',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodyMedium?.color,

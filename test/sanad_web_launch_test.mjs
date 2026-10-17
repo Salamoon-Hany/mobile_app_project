@@ -4,9 +4,11 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {LaunchState} from '../web/sanad-launch-state.mjs';
 const ui = readFileSync(new URL('../web/sanad-intro.js', import.meta.url), 'utf8')
-  .replace("import {LaunchState} from './sanad-launch-state.mjs';", '');
-function launch({seen = false, storageDenied = false, reducedMotion = false} = {}) {
+  .replace("import {LaunchState} from './sanad-launch-state.mjs';", '')
+  .replace("import {preloadFirebase} from './firebase-bootstrap.mjs';", '');
+function launch({seen = false, storageDenied = false, reducedMotion = false, firebaseReady = Promise.resolve()} = {}) {
   const nodes = new Map(); const timers = []; const stored = new Map();
+  const scripts = [];
   if (seen) stored.set('sanad.onboarding.v1', 'done');
   stored.set('flutter.sanad.language.v1', JSON.stringify('ar'));
   const make = id => ({id, hidden:['sanad-intro','sanad-wait','sanad-retry','sanad-back'].includes(id),
@@ -16,17 +18,34 @@ function launch({seen = false, storageDenied = false, reducedMotion = false} = {
     focus() { this.focused = true; }, click() { this.events.click?.(); }});
   const dots = Array.from({length:3}, (_,i) => Object.assign(make(`dot-${i}`),{dataset:{step:String(i)}}));
   const doc = {getElementById(id) { if (!nodes.has(id)) nodes.set(id,make(id)); return nodes.get(id); },
-    querySelectorAll(selector) { return selector === '[data-step]' ? dots : []; }, createElement() { return make('script'); }, body:{appendChild() {}}};
+    querySelectorAll(selector) { return selector === '[data-step]' ? dots : []; }, createElement() { return make('script'); }, body:{appendChild(script) {scripts.push(script);}}};
   let reloaded = false;
-  const context = {LaunchState, document:doc, window:{matchMedia:() => ({matches:reducedMotion})},
+  const context = {LaunchState, preloadFirebase:() => firebaseReady, document:doc, window:{matchMedia:() => ({matches:reducedMotion})},
     localStorage:{getItem(k) { if(storageDenied) throw Error('disabled'); return stored.get(k); },
       setItem(k,v) { if(storageDenied) throw Error('disabled'); stored.set(k,v); }},
     setTimeout(fn,ms) { const t={fn,ms,active:true}; timers.push(t); return t; },
     clearTimeout(t) { t.active=false; }, location:{reload() { reloaded=true; }}};
   vm.runInNewContext(ui,context);
   const run = ms => { for(const t of timers.filter(t => t.active && t.ms===ms)) {t.active=false;t.fn();} };
-  return {node:doc.getElementById.bind(doc), window:context.window, run, stored, dots, reloaded:() => reloaded};
+  return {node:doc.getElementById.bind(doc), window:context.window, run, stored, dots, scripts, reloaded:() => reloaded};
 }
+test('Flutter waits for Firebase modules before starting', async () => {
+  let ready;
+  const app = launch({firebaseReady:new Promise(resolve => {ready=resolve;})});
+  assert.equal(app.scripts.length,0);
+  ready();
+  await new Promise(setImmediate);
+  assert.equal(app.scripts.length,1);
+  assert.equal(app.scripts[0].src,'flutter_bootstrap.js');
+});
+test('Firebase loading failure exposes retry instead of a disabled login screen', async () => {
+  const app = launch({seen:true,firebaseReady:Promise.reject(Error('SDK unavailable'))});
+  await new Promise(setImmediate);
+  app.run(2700);
+  assert.equal(app.scripts.length,0);
+  assert.equal(app.node('sanad-app-host').inert,true);
+  assert.equal(app.node('sanad-retry').hidden,false);
+});
 test('first visit keeps app inert until intro completion AND engine readiness', () => {
   const app=launch(); app.run(2699);assert.equal(app.node('sanad-intro').hidden,true);app.run(2700);
   assert.equal(app.node('sanad-intro').hidden,false);

@@ -1,6 +1,8 @@
+import {AdminAlerts} from './admin-alerts.mjs';
 import {readJson,safeFailure,assertPublicOutput,RequestLimiter} from './security.mjs';
 import {validatedPhoto} from './photo-validation.mjs';
 import {ServiceExperience, appointment} from './service-experience.mjs';
+import {PlatformFinance} from './admin-finance.mjs';
 export const SERVICES = ['builder','electrician','plumber','carpenter','tiler','steel_fixer','plasterer','repairing','gardener','heavy_equipment','rubbish'];
 export const EXPERIENCE_COUNTRIES=['EG','AE','SA','QA','KW','BH','OM','PK','IN'];
 const names = ['Builder','Electrician','Plumber','Carpenter','Tiler','Steel Fixer','Plasterer','Repairing','Gardener','Heavy Equipment','Rubbish'];
@@ -39,7 +41,7 @@ async function eraseFirebaseAccount(uid,token,apiKey,fetchImpl){
 }
 
 export class MarketplaceRepository {
- constructor(db){this.db=db;}
+ constructor(db){this.db=db;this.finance=new PlatformFinance(db);}
  account(uid){return this.db.prepare('SELECT * FROM marketplace_accounts WHERE uid=? AND deleted_at=0').bind(uid).first();}
  active(uid){return this.db.prepare('INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN EXISTS(SELECT 1 FROM marketplace_accounts WHERE uid=? AND deleted_at=0) THEN 1 ELSE 0 END').bind(uid);}
  async register(user,body){
@@ -97,8 +99,8 @@ export class MarketplaceRepository {
  async snapshot(uid){
   const account=await this.account(uid);if(!account)failure('ACCOUNT_REQUIRED',409);
   const rows=await this.db.prepare(`SELECT o.id,o.customer_uid,o.worker_uid,o.request_id,o.services,o.amount,o.details,o.location,o.scheduled_at,o.status,o.created_at,o.updated_at,(o.photo IS NOT NULL) AS has_photo,c.name AS customer_name,COALESCE(NULLIF(c.contact_phone,''),c.phone) AS customer_phone,w.name AS worker_name FROM marketplace_orders o JOIN marketplace_accounts c ON c.uid=o.customer_uid JOIN marketplace_accounts w ON w.uid=o.worker_uid WHERE o.customer_uid=? OR o.worker_uid=? ORDER BY o.created_at DESC LIMIT 1000`).bind(uid,uid).all();
-  const deposits=await this.db.prepare('SELECT request_id AS id,amount,method FROM marketplace_deposits WHERE uid=? ORDER BY created_at DESC LIMIT 1000').bind(uid).all();
-  const withdrawals=await this.db.prepare('SELECT w.request_id AS id,w.amount,w.fee,w.net,w.method,w.destination,w.status,w.created_at,w.updated_at,r.state AS review_state,r.note AS review_note FROM marketplace_withdrawals w LEFT JOIN withdrawal_reviews r ON r.uid=w.uid AND r.request_id=w.request_id WHERE w.uid=? ORDER BY w.created_at DESC LIMIT 1000').bind(uid).all();
+  const deposits=await this.db.prepare("SELECT d.request_id AS id,d.amount,d.method,COALESCE(l.fee,(d.amount+50)/100) AS fee FROM marketplace_deposits d LEFT JOIN platform_fee_history l ON l.source_type='deposit' AND l.uid=d.uid AND l.request_id=d.request_id WHERE d.uid=? ORDER BY d.created_at DESC LIMIT 1000").bind(uid).all();
+  const withdrawals=await this.db.prepare('SELECT request_id AS id,amount,fee,net,fee_bps,role,mode,method,destination,status,created_at,updated_at,review_state,note AS review_note FROM wallet_withdrawal_history WHERE uid=? ORDER BY created_at DESC LIMIT 1000').bind(uid).all();
   return {withdrawals:withdrawals.results,...await this.customerSettings(uid),account:{uid:account.uid,role:account.role,name:account.name,phone:account.phone,contact_phone:account.contact_phone,gender:account.gender,national_id_last4:account.national_id_last4,available:account.available,photo:account.photo,balance:account.balance,created_at:account.created_at,skills:JSON.parse(account.skills),legacy_orders:JSON.parse(account.legacy_orders)},orders:rows.results.map(o=>({...o,services:JSON.parse(o.services),location:JSON.parse(o.location)})),deposits:[...JSON.parse(account.legacy_receipts),...deposits.results]};
  }
  async orderPhoto(uid,id){
@@ -135,6 +137,7 @@ export class MarketplaceRepository {
     this.db.prepare('INSERT OR IGNORE INTO marketplace_deposits(uid,request_id,amount,method,created_at) VALUES(?,?,?,?,?)').bind(uid,id,amount,body.method,Date.now()),
     this.db.prepare('INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN EXISTS(SELECT 1 FROM marketplace_deposits WHERE uid=? AND request_id=? AND amount=? AND method=?) THEN 1 ELSE 0 END').bind(uid,id,amount,body.method),
     this.db.prepare('UPDATE marketplace_accounts SET balance=balance+? WHERE uid=? AND EXISTS(SELECT 1 FROM marketplace_deposits WHERE uid=? AND request_id=? AND credited=0)').bind(amount,uid,uid,id),
+    this.finance.depositFee(uid,id,amount,Date.now()),
     this.db.prepare('UPDATE marketplace_deposits SET credited=1 WHERE uid=? AND request_id=?').bind(uid,id),
     this.db.prepare('DELETE FROM marketplace_assertions').bind(),
   ]);}catch(e){if(e.message.includes('marketplace_valid'))failure('IDEMPOTENCY_CONFLICT',409);throw e;}
@@ -194,40 +197,13 @@ export class MarketplaceRepository {
   try{await this.db.batch(statements);}catch(e){if(e.message.includes('marketplace_valid'))failure('ORDER_CHANGED',409);throw e;}
 
  }
- async withdraw(uid,body){
-  const a=await this.account(uid);if(a?.role!=='worker')failure('FORBIDDEN',403);
-  const id=requestId(body.requestId),amount=body.amount,method=body.method;
-  if(!Number.isSafeInteger(amount)||amount<1000||amount>100000000||!['mobile_wallet','instapay'].includes(method))failure('INVALID_REQUEST');
-  const destination=method==='mobile_wallet'?normalizeContact(body.destination):text(body.destination,120);
-  if(method==='instapay'&&!/^[A-Za-z0-9._-]{3,80}@instapay$/.test(destination))failure('INVALID_DESTINATION');
-  const old=await this.db.prepare('SELECT amount,method,destination FROM marketplace_withdrawals WHERE uid=? AND request_id=?').bind(uid,id).first();
-  if(old&&(old.amount!==amount||old.method!==method||old.destination!==destination))failure('IDEMPOTENCY_CONFLICT',409);
-  const fee=Math.floor((amount*5+50)/100),now=Date.now();
-  try{await this.db.batch([
-   this.active(uid),
-   this.db.prepare('INSERT OR IGNORE INTO marketplace_withdrawals(uid,request_id,amount,fee,net,method,destination,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(uid,id,amount,fee,amount-fee,method,destination,now,now),
-   this.db.prepare('INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN EXISTS(SELECT 1 FROM marketplace_withdrawals WHERE uid=? AND request_id=? AND amount=? AND method=? AND destination=?) THEN 1 ELSE 0 END').bind(uid,id,amount,method,destination),
-   this.db.prepare('UPDATE marketplace_accounts SET balance=balance-? WHERE uid=? AND EXISTS(SELECT 1 FROM marketplace_withdrawals WHERE uid=? AND request_id=? AND reserved=0)').bind(amount,uid,uid,id),
-   this.db.prepare('UPDATE marketplace_withdrawals SET reserved=1 WHERE uid=? AND request_id=?').bind(uid,id),
-   this.db.prepare('DELETE FROM marketplace_assertions').bind(),
-  ]);}catch(e){if(e.message.includes('balance'))failure('INSUFFICIENT_BALANCE',409);if(e.message.includes('marketplace_valid'))failure('IDEMPOTENCY_CONFLICT',409);throw e;}
- }
- async cancelWithdrawal(uid,id){
-  if((await this.account(uid))?.role!=='worker')failure('FORBIDDEN',403);requestId(id);
-  const row=await this.db.prepare('SELECT * FROM marketplace_withdrawals WHERE uid=? AND request_id=?').bind(uid,id).first();if(!row)failure('NOT_FOUND',404);
-  await this.db.batch([
-   this.active(uid),
-   this.db.prepare("UPDATE marketplace_withdrawals SET status='cancelled',updated_at=? WHERE uid=? AND request_id=? AND status='pending'").bind(Date.now(),uid,id),
-   this.db.prepare("UPDATE marketplace_accounts SET balance=balance+? WHERE uid=? AND EXISTS(SELECT 1 FROM marketplace_withdrawals WHERE uid=? AND request_id=? AND status='cancelled' AND refunded=0 AND reserved=1)").bind(row.amount,uid,uid,id),
-   this.db.prepare("UPDATE marketplace_withdrawals SET refunded=1 WHERE uid=? AND request_id=? AND status='cancelled'").bind(uid,id),
-   this.db.prepare('DELETE FROM marketplace_assertions').bind(),
-  ]);
- }
+ async withdraw(uid,body,options){return this.finance.withdraw(await this.account(uid),body,normalizeContact,options);}
+ async cancelWithdrawal(uid,id){return this.finance.cancel(uid,id);}
  async deleteAccount(uid){
   // Tombstone first: even cached Firebase tokens cannot read or mutate the account.
   // Preserve only anonymous financial/order ledger records for counterpart histories.
   try{await this.db.batch([
-   this.db.prepare("INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM marketplace_orders WHERE (customer_uid=? OR worker_uid=?) AND status IN ('pending','accepted')) AND NOT EXISTS(SELECT 1 FROM marketplace_withdrawals WHERE uid=? AND status='pending') THEN 1 ELSE 0 END").bind(uid,uid,uid),
+   this.db.prepare("INSERT INTO marketplace_assertions(passed) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM marketplace_orders WHERE (customer_uid=? OR worker_uid=?) AND status IN ('pending','accepted')) AND NOT EXISTS(SELECT 1 FROM wallet_withdrawal_history WHERE uid=? AND status='pending') THEN 1 ELSE 0 END").bind(uid,uid,uid),
    this.db.prepare("UPDATE marketplace_accounts SET deleted_at=CASE WHEN deleted_at=0 THEN ? ELSE deleted_at END,name='Deleted account',phone='',contact_phone='',gender='',national_id_last4='',skills='[]',photo=NULL,balance=0,legacy_orders='[]',legacy_receipts='[]' WHERE uid=?").bind(Date.now(),uid),
    this.db.prepare('DELETE FROM order_messages WHERE sender_uid=?').bind(uid),
    this.db.prepare('DELETE FROM order_reviews WHERE customer_uid=?').bind(uid),
@@ -237,7 +213,9 @@ export class MarketplaceRepository {
    this.db.prepare('DELETE FROM app_ratings WHERE uid=?').bind(uid),
    this.db.prepare('DELETE FROM worker_applications WHERE uid=?').bind(uid),
    this.db.prepare('DELETE FROM phone_login_aliases WHERE uid=?').bind(uid),
+   this.db.prepare('DELETE FROM account_activity WHERE uid=?').bind(uid),
    this.db.prepare("UPDATE marketplace_withdrawals SET destination='' WHERE uid=?").bind(uid),
+   this.db.prepare("UPDATE wallet_withdrawals SET destination='' WHERE uid=?").bind(uid),
    this.db.prepare("UPDATE marketplace_orders SET details='',location=?,photo=NULL WHERE customer_uid=?").bind(JSON.stringify({latitude:0,longitude:0,label:'Location removed',fromGps:false,redacted:true}),uid),
    this.db.prepare('DELETE FROM marketplace_assertions').bind(),
   ]);}catch(e){if(e.message.includes('marketplace_valid'))failure('DELETE_ACTIVE_WORK',409);throw e;}
@@ -260,14 +238,20 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    const url=new URL(request.url);if(request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)failure('FORBIDDEN',403);
    if(!['GET','POST'].includes(request.method))failure('METHOD_NOT_ALLOWED',405);
    const deleting=url.pathname==='/api/marketplace/account/delete';
-   const user=await authenticate(request,url.pathname==='/api/marketplace/signup-role'&&request.method==='POST',deleting);let body={};
+   const user=await authenticate(request,url.pathname==='/api/marketplace/signup-role'&&request.method==='POST',deleting||url.pathname.startsWith('/api/marketplace/admin')||url.pathname==='/api/marketplace/session');let body={};
    if(request.method==='POST')body=await readJson(request);
    if(limiterEnabled){const limiter=new RequestLimiter(repository.db,now);await limiter.hit(request.method==='GET'?'read':'write',user.localId,request.method==='GET'?150:30);if(request.method==='POST'&&/\/(deposit|withdrawals|orders)$/.test(url.pathname))await limiter.hit('financial',user.localId,10);}
    let data;const route=url.pathname.replace('/api/marketplace','');
-   if(route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
-   const isAdmin=user.emailVerified===true&&adminEmails.map(x=>x.toLowerCase()).includes(user.email.toLowerCase());
+   const isAdmin=user.emailVerified===true&&adminEmails.map(x=>x.trim().toLowerCase()).includes(user.email.toLowerCase());
+   // Administrators are Firebase identities, never marketplace customers/workers.
+   // This route works before any customer profile or marketplace row exists.
+   if(route==='/session'&&request.method==='GET')return Response.json({isAdmin,role:isAdmin?'admin':null},{headers:{'Cache-Control':'no-store'}});
+   if(isAdmin&&!route.startsWith('/admin'))failure('FORBIDDEN',403);
+   if(!isAdmin&&route.startsWith('/admin'))failure('FORBIDDEN',403);
+   if(!isAdmin&&route!=='/account/delete'&&route!=='/bootstrap'&&route!=='/signup-role'&&!await repository.account(user.localId))failure('ACCOUNT_REQUIRED',409);
    if(route==='/admin'&&request.method==='GET'){if(!isAdmin)failure('FORBIDDEN',403);data=await experience.adminSnapshot();}
-   else if(route==='/admin/decision'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);await experience.adminDecision(user.localId,body);data=await experience.adminSnapshot();}
+   else if(route==='/admin/notifications/read'&&request.method==='POST'){await new AdminAlerts(repository.db).read(user.localId,body);data=await experience.adminSnapshot();}
+   else if(route==='/admin/decision'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);await experience.adminDecision(user.localId,body,{allowDemoFunds});data=await experience.adminSnapshot();}
    else if(route==='/admin/photo'&&request.method==='POST'){if(!isAdmin)failure('FORBIDDEN',403);const row=await repository.db.prepare('SELECT photo FROM order_complaints WHERE id=?').bind(body.id).first();if(!row)failure('NOT_FOUND',404);data={photo:row.photo};}
    else if(route==='/quotes'&&request.method==='POST'){await experience.requestQuote(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/quotes\/[^/]+\/(offer|cancel)$/.test(route)&&request.method==='POST'){const id=route.split('/')[2];if(route.endsWith('/offer'))await experience.offer(user.localId,id,body);else await experience.cancelQuote(user.localId,id);data=await repository.snapshot(user.localId);}
@@ -286,11 +270,12 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
     for(const [key,value] of tokens)if(value.user.localId===user.localId)tokens.delete(key);
     data={deleted:true};
    }
-   else if(route==='/signup-role'&&request.method==='POST'){await repository.register(user,{role:body.role,name:body.name,phone:body.phone,nationalId:body.nationalId});data={registered:true};}
+   else if(route==='/signup-role'&&request.method==='POST'){if(!['customer','worker'].includes(body.role??'customer'))failure('INVALID_ROLE');await repository.register(user,{role:'customer',name:body.name,phone:body.phone,nationalId:body.nationalId});data={registered:true};}
    else if(route==='/bootstrap'&&request.method==='POST'){
     // Local storage is not a financial authority. Preserve a bounded claim for manual review.
     const claim=body.legacyBalance??0;if(!Number.isSafeInteger(claim)||claim<0||claim>100000000)failure('INVALID_REQUEST');
-    await repository.register(user,{...body,legacyBalance:0,legacyOrders:legacyRows(body.legacyOrders,['id','service','description','status','icon','createdAt','statusChangedAt','location']),legacyReceipts:legacyRows(body.legacyReceipts,['id','amount','method']).filter(x=>typeof x.id==='string'&&Number.isSafeInteger(x.amount)&&['visa','vodafoneCash','fawry'].includes(x.method)).map(x=>({...x,email:user.email}))});
+    if(!['customer','worker'].includes(body.role??'customer'))failure('INVALID_ROLE');
+    await repository.register(user,{...body,role:'customer',legacyBalance:0,legacyOrders:legacyRows(body.legacyOrders,['id','service','description','status','icon','createdAt','statusChangedAt','location']),legacyReceipts:legacyRows(body.legacyReceipts,['id','amount','method']).filter(x=>typeof x.id==='string'&&Number.isSafeInteger(x.amount)&&['visa','vodafoneCash','fawry'].includes(x.method)).map(x=>({...x,email:user.email}))});
     if(body.hasLegacy===true&&claim>0)await repository.db.prepare('UPDATE marketplace_accounts SET legacy_balance_claim=MAX(legacy_balance_claim,?) WHERE uid=? AND deleted_at=0').bind(claim,user.localId).run();
     data=await repository.snapshot(user.localId);}
    else if(route==='/snapshot'&&request.method==='GET')data=await repository.snapshot(user.localId);
@@ -298,14 +283,16 @@ export function createMarketplaceHandler({repository,apiKey,fetchImpl=fetch,now=
    else if(/^\/orders\/[^/]+\/photo$/.test(route)&&request.method==='GET')data=await repository.orderPhoto(user.localId,route.split('/')[2]);
    else if(route==='/worker-application'&&request.method==='POST'){await repository.submitWorkerApplication(user,body);data=await repository.snapshot(user.localId);}
    else if(route==='/rating'&&request.method==='POST'){await repository.rateApplication(user.localId,body);data=await repository.snapshot(user.localId);}
-   else if(route==='/withdrawals'&&request.method==='POST'){await repository.withdraw(user.localId,body);data=await repository.snapshot(user.localId);}
+   else if(route==='/withdrawals'&&request.method==='POST'){await repository.withdraw(user.localId,body,{demo:allowDemoFunds});data=await repository.snapshot(user.localId);}
    else if(/^\/withdrawals\/[^/]+\/cancel$/.test(route)&&request.method==='POST'){await repository.cancelWithdrawal(user.localId,route.split('/')[2]);data=await repository.snapshot(user.localId);}
    else if(route==='/profile'&&request.method==='POST'){await repository.update(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(route==='/deposit'&&request.method==='POST'){if(!allowDemoFunds)failure('PAYMENTS_NOT_CONFIGURED',503);await repository.deposit(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(route==='/orders'&&request.method==='POST'){await repository.createOrder(user.localId,body);data=await repository.snapshot(user.localId);}
    else if(/^\/orders\/[^/]+\/decision$/.test(route)&&request.method==='POST'){await repository.decide(user.localId,route.split('/')[2],body.action);data=await repository.snapshot(user.localId);}
    else failure('NOT_FOUND',404);
-   if(data?.account){data.isAdmin=isAdmin;data.quotes=await experience.quotes(user.localId);data.notices=await experience.notices(user.localId);}
+   if(isAdmin&&data?.summary)data.notifications=await new AdminAlerts(repository.db).list(user.localId);
+   if(!isAdmin&&route!=='/account/delete')await repository.finance.touch(user,['/signup-role','/bootstrap'].includes(route)?body.role:undefined);
+   if(data?.account){data.workerApplicationRequested=data.account.role==='customer'&&(await repository.db.prepare('SELECT requested_role FROM account_activity WHERE uid=?').bind(user.localId).first())?.requested_role==='worker';data.isAdmin=isAdmin;data.quotes=await experience.quotes(user.localId);data.notices=await experience.notices(user.localId);}
    assertPublicOutput(data);
    return Response.json(data,{headers:{'Cache-Control':'no-store'}});
   }catch(e){return safeFailure(e,request); }

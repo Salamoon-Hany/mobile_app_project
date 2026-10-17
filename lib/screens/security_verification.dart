@@ -38,6 +38,8 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   late final VerificationService _service;
   String _role = 'customer';
   bool _busy = false;
+  bool _showPassword = false;
+  bool _showConfirmation = false;
   bool _pending = false;
   bool _completed = false;
   String? _error;
@@ -132,7 +134,11 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         // Keep the created identity if mail delivery fails: retry sending,
         // rather than creating the same account a second time.
         setState(() => _pending = true);
-        await _send();
+        if (_signup) {
+          await _send();
+        } else {
+          _notice = 'Verify your email using the link sent when you signed up.';
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -371,9 +377,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       TextFormField(
                         controller: _email,
                         enabled: !_busy,
-                        keyboardType: _signup
-                            ? TextInputType.emailAddress
-                            : TextInputType.text,
+                        keyboardType: TextInputType.emailAddress,
                         autofillHints: [
                           _signup
                               ? AutofillHints.email
@@ -381,9 +385,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                         ],
                         decoration: InputDecoration(
                           labelText: tr(
-                            _signup
-                                ? 'Email address'
-                                : 'Email or verified mobile number',
+                            _signup ? 'Email address' : 'Email address',
                           ),
                         ),
                         validator: (v) {
@@ -403,7 +405,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       TextFormField(
                         controller: _password,
                         enabled: !_busy,
-                        obscureText: true,
+                        obscureText: !_showPassword,
                         autofillHints: [
                           _signup
                               ? AutofillHints.newPassword
@@ -411,6 +413,22 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                         ],
                         decoration: InputDecoration(
                           labelText: tr('Password'),
+                          suffixIcon: IconButton(
+                            key: const Key('toggle-password'),
+                            tooltip: tr(
+                              _showPassword ? 'Hide password' : 'Show password',
+                            ),
+                            onPressed: _busy
+                                ? null
+                                : () => setState(
+                                    () => _showPassword = !_showPassword,
+                                  ),
+                            icon: Icon(
+                              _showPassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                            ),
+                          ),
                           helperText: _signup
                               ? tr('At least 8 characters')
                               : null,
@@ -426,9 +444,28 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                         TextFormField(
                           controller: _confirm,
                           enabled: !_busy,
-                          obscureText: true,
+                          obscureText: !_showConfirmation,
                           decoration: InputDecoration(
                             labelText: tr('Confirm password'),
+                            suffixIcon: IconButton(
+                              key: const Key('toggle-confirm-password'),
+                              tooltip: tr(
+                                _showConfirmation
+                                    ? 'Hide password'
+                                    : 'Show password',
+                              ),
+                              onPressed: _busy
+                                  ? null
+                                  : () => setState(
+                                      () => _showConfirmation =
+                                          !_showConfirmation,
+                                    ),
+                              icon: Icon(
+                                _showConfirmation
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                            ),
                           ),
                           validator: (v) => v != _password.text
                               ? tr('Passwords do not match.')
