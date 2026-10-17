@@ -65,9 +65,10 @@ class _AdminState extends State<AdminScreen> {
       ? e.message
       : 'Could not load administration. Please retry.';
   String _date(dynamic v) => v is num && v > 0
-      ? DateTime.fromMillisecondsSinceEpoch(
-          v.toInt(),
-        ).toLocal().toString().substring(0, 16)
+      ? DateTime.fromMillisecondsSinceEpoch(v.toInt())
+            .toLocal()
+            .toString()
+            .substring(0, 16)
       : tr('Not recorded');
   int _value(Map m, String key) => (m[key] as num?)?.toInt() ?? 0;
   List<Map<String, dynamic>> _rows(String key) => [
@@ -84,13 +85,15 @@ class _AdminState extends State<AdminScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: AppText(action == 'paid' ? 'Complete demo payout?' : action),
+        title: AppText(
+          action == 'paid' ? 'Record withdrawal completion?' : action,
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (action == 'paid')
               const AppText(
-                'This completes a demo withdrawal. No real money is transferred.',
+                'This updates the withdrawal record only. No money is transferred.',
               ),
             TextField(
               controller: input,
@@ -240,7 +243,7 @@ class _AdminState extends State<AdminScreen> {
           '${_value(summary, 'pendingWithdrawals')}',
         ),
         _stat('Platform balance', egp(_value(p, 'balance'))),
-        _stat('Demo platform balance', egp(_value(p, 'demoBalance'))),
+        _stat('Recorded platform balance', egp(_value(p, 'demoBalance'))),
       ]),
       _heading('Monthly registrations'),
       for (final r in _rows('registrations'))
@@ -256,23 +259,23 @@ class _AdminState extends State<AdminScreen> {
 
   Widget _wallet() {
     final p = Map<String, dynamic>.from(_data?['platform'] as Map? ?? {});
-    final ledger = _rows(
-      'ledger',
-    ).where((r) => r['mode'] == (_demo ? 'demo' : 'live')).toList();
+    final ledger = _rows('ledger')
+        .where((r) => r['mode'] == (_demo ? 'demo' : 'live'))
+        .toList();
     return _list([
       _heading('Platform wallet'),
       _grid([
         _stat('Platform balance', egp(_value(p, 'balance'))),
-        _stat('Demo platform balance', egp(_value(p, 'demoBalance'))),
+        _stat('Recorded platform balance', egp(_value(p, 'demoBalance'))),
         _stat('Earnings this month', egp(_value(p, 'monthlyEarnings'))),
         _stat(
-          'Demo earnings this month',
+          'Recorded earnings this month',
           egp(_value(p, 'monthlyDemoEarnings')),
         ),
       ]),
       const SizedBox(height: 16),
       const AppText(
-        'Demo earnings are accounting examples and cannot be withdrawn as real money.',
+        'Recorded balances are bookkeeping entries and are not available for withdrawal.',
       ),
       const SizedBox(height: 10),
       AppText(
@@ -286,7 +289,7 @@ class _AdminState extends State<AdminScreen> {
         spacing: 10,
         children: [
           ChoiceChip(
-            label: const AppText('Demo'),
+            label: const AppText('Recorded transactions'),
             selected: _demo,
             onSelected: (_) => setState(() => _demo = true),
           ),
@@ -378,7 +381,9 @@ class _AdminState extends State<AdminScreen> {
         ),
         Text('${tr('You receive')}: ${egp(r['net'] as int)}'),
         SelectableText(r['destination'] as String),
-        AppText(r['mode'] == 'demo' ? 'Demo' : 'Real payments'),
+        AppText(
+          r['mode'] == 'demo' ? 'Recorded transactions' : 'Real payments',
+        ),
         AppText(r['status'] as String),
         AppText(r['review_state'] as String),
         if ((r['note'] as String).isNotEmpty) Text(r['note'] as String),
@@ -398,7 +403,7 @@ class _AdminState extends State<AdminScreen> {
                   onPressed: _busy
                       ? null
                       : () => _decision('withdrawal', r, 'paid'),
-                  child: const AppText('Complete demo payout'),
+                  child: const AppText('Record withdrawal completion'),
                 ),
               TextButton(
                 onPressed: _busy
@@ -505,7 +510,7 @@ class _AdminState extends State<AdminScreen> {
         trailing: r['amount'] == null
             ? null
             : Text(
-                '${egp(r['amount'] as int)}\n${tr(r['mode'] == 'demo' ? 'Demo' : 'Real payments')}',
+                '${egp(r['amount'] as int)}\n${tr(r['mode'] == 'demo' ? 'Recorded transactions' : 'Real payments')}',
               ),
       ),
     for (final r in _rows('audit'))

@@ -16,16 +16,16 @@ const arabicStrings = <String, String>{
   "Completed this month": "المكتملة هذا الشهر",
   "Pending withdrawals": "طلبات السحب المعلقة",
   "Platform balance": "رصيد المنصة",
-  "Demo platform balance": "رصيد المنصة التجريبي",
+  "Recorded platform balance": "رصيد المنصة المسجل",
   "Monthly registrations": "التسجيلات الشهرية",
   "Earnings this month": "إيرادات هذا الشهر",
-  "Demo earnings this month": "الإيرادات التجريبية هذا الشهر",
-  "Demo earnings are accounting examples and cannot be withdrawn as real money.":
-      "الإيرادات التجريبية قيود توضيحية وليست أموالًا حقيقية قابلة للسحب.",
+  "Recorded earnings this month": "الأرباح المسجلة هذا الشهر",
+  "Recorded balances are bookkeeping entries and are not available for withdrawal.":
+      "الأرصدة المسجلة قيود محاسبية وغير متاحة للسحب.",
   "Fees awaiting settlement": "رسوم في انتظار التسوية",
   "Pending and cancelled withdrawals are not included in earnings.":
       "السحوبات المعلقة والملغاة لا تدخل ضمن الإيرادات.",
-  "Demo": "تجريبي",
+  "Recorded transactions": "عمليات مسجلة",
   "Real payments": "مدفوعات حقيقية",
   "Fee transactions": "سجل الرسوم",
   "No fee transactions yet.": "لا توجد رسوم مسجلة بعد.",
@@ -39,10 +39,10 @@ const arabicStrings = <String, String>{
   "Review reserves the request; it does not send money.":
       "المراجعة تثبت فحص الطلب ولا تنفذ تحويلًا ماليًا.",
   "Service fee": "رسوم الخدمة",
-  "Complete demo payout": "إتمام السحب التجريبي",
-  "Complete demo payout?": "إتمام السحب التجريبي؟",
-  "This completes a demo withdrawal. No real money is transferred.":
-      "سيتم إتمام السحب التجريبي دون تحويل أموال حقيقية.",
+  "Record withdrawal completion": "تسجيل اكتمال السحب",
+  "Record withdrawal completion?": "تسجيل اكتمال السحب؟",
+  "This updates the withdrawal record only. No money is transferred.":
+      "يحدث هذا سجل السحب فقط، ولا يحول أي أموال.",
   "Latest orders": "أحدث الطلبات",
   "Latest accounts": "أحدث الحسابات",
   "Accounts": "الحسابات",
@@ -58,8 +58,7 @@ const arabicStrings = <String, String>{
       "موافقة الإدارة مطلوبة قبل بدء العمل.",
   "Withdraw funds": "سحب رصيد",
   "Withdrawal fee (1%)": "رسوم السحب (١٪)",
-  "Counts cover accounts registered in SANAD. Activity means a successful authenticated visit in the last 30 days.":
-      "الإحصائيات تخص الحسابات المسجلة في سند. النشاط يعني زيارة موثقة ناجحة خلال آخر ٣٠ يومًا.",
+  "Counts cover accounts registered in SANAD. Activity means a successful authenticated visit in the last 30 days.": "الإحصائيات تخص الحسابات المسجلة في سند. النشاط يعني زيارة موثقة ناجحة خلال آخر ٣٠ يومًا.",
   "A secure connection is required.": "محتاج اتصال آمن عشان تكمل.",
   "Sign in is temporarily unavailable. Please retry later.":
       "تسجيل الدخول مش متاح مؤقتًا. جرّب كمان شوية.",
@@ -218,10 +217,8 @@ const arabicStrings = <String, String>{
       "اكتب رقم قومي مصري صحيح من ١٤ رقم.",
   "Delete Account": "حذف الحساب",
   "Delete your account permanently?": "تحذف حسابك نهائيًا؟",
-  "Your profile, photo, contact details and feedback will be removed. Anonymous transaction records may remain in order histories. This cannot be undone.":
-      "هنحذف بياناتك الشخصية وصورتك وبيانات التواصل وتقييمك. ممكن تفضل سجلات المعاملات في سجل الطلبات بدون بياناتك الشخصية. الحذف نهائي.",
-  "Any remaining balance will be lost. Finish or cancel active orders and pending withdrawals first.":
-      "أي رصيد متبقي هيتم فقده. خلّص أو الغي الطلبات الحالية وطلبات السحب المعلقة الأول.",
+  "Your profile, photo, contact details and feedback will be removed. Anonymous transaction records may remain in order histories. This cannot be undone.": "هنحذف بياناتك الشخصية وصورتك وبيانات التواصل وتقييمك. ممكن تفضل سجلات المعاملات في سجل الطلبات بدون بياناتك الشخصية. الحذف نهائي.",
+  "Any remaining balance will be lost. Finish or cancel active orders and pending withdrawals first.": "أي رصيد متبقي هيتم فقده. خلّص أو الغي الطلبات الحالية وطلبات السحب المعلقة الأول.",
   "I understand and want to delete my account.": "فاهم وموافق على حذف حسابي.",
   "Finish or cancel active orders and pending withdrawals before deleting your account.":
       "خلّص أو الغي الطلبات الحالية وطلبات السحب المعلقة قبل حذف حسابك.",
@@ -394,8 +391,7 @@ const arabicStrings = <String, String>{
   'Welcome': 'أهلًا بيك',
   'Not verified': 'غير مؤكّد',
   '01012345678 or +201012345678': '01012345678 أو +201012345678',
-  'Payment reserved. Continue your booking or start a new order to release the reserved amount.':
-      'تم حجز قيمة الطلب. كمّل طلبك أو ابدأ طلبًا جديدًا لاسترجاع المبلغ المحجوز.',
+  'Payment reserved. Continue your booking or start a new order to release the reserved amount.': 'تم حجز قيمة الطلب. كمّل طلبك أو ابدأ طلبًا جديدًا لاسترجاع المبلغ المحجوز.',
   'Select worker': 'اختيار مقدم الخدمة',
   'Selected worker': 'مقدم الخدمة المختار',
   'Change worker': 'تغيير مقدم الخدمة',
@@ -429,12 +425,10 @@ const arabicStrings = <String, String>{
   'Log out': 'تسجيل الخروج',
   'Logout': 'تسجيل الخروج',
   'Your services. Your account.': 'خدماتك وحسابك في مكان واحد.',
-  'Log in to your account or create a new one. Sign in with email and password. Confirm your email with a verification link.':
-      'سجّل الدخول أو أنشئ حسابًا جديدًا باستخدام الإيميل وكلمة المرور، وأكّد إيميلك من رابط التحقق.',
+  'Log in to your account or create a new one. Sign in with email and password. Confirm your email with a verification link.': 'سجّل الدخول أو أنشئ حسابًا جديدًا باستخدام الإيميل وكلمة المرور، وأكّد إيميلك من رابط التحقق.',
   'A verified account is required to access services.':
       'أكّد حسابك عشان تقدر تستخدم الخدمات.',
-  'Account verification is awaiting setup. Access stays locked until Firebase email verification is configured.':
-      'التحقق من الحساب لم يتم إعداده بعد. الخدمات غير متاحة حتى يكتمل الإعداد.',
+  'Account verification is awaiting setup. Access stays locked until Firebase email verification is configured.': 'التحقق من الحساب لم يتم إعداده بعد. الخدمات غير متاحة حتى يكتمل الإعداد.',
   'Email and password': 'الإيميل وكلمة المرور',
   'Email address': 'البريد الإلكتروني',
   'Email': 'البريد الإلكتروني',
@@ -470,8 +464,7 @@ const arabicStrings = <String, String>{
       'تم إرسال رابط التحقق. راجع الوارد والرسائل غير المرغوب فيها.',
   'Your email is not verified yet. Open the link in your email, then try again.':
       'بريدك الإلكتروني لم يتم تأكيده بعد. افتح رابط التحقق وحاول تاني.',
-  'If an account exists for this email, a password reset link has been sent. Check inbox and spam.':
-      'لو الإيميل ده مسجّل، هيوصلك رابط لإعادة تعيين كلمة المرور. راجع الوارد والرسائل غير المرغوب فيها.',
+  'If an account exists for this email, a password reset link has been sent. Check inbox and spam.': 'لو الإيميل ده مسجّل، هيوصلك رابط لإعادة تعيين كلمة المرور. راجع الوارد والرسائل غير المرغوب فيها.',
   'Email or password is incorrect. Sign up if you need an account.':
       'الإيميل أو كلمة المرور غير صحيحين. أنشئ حسابًا لو لسه مش مسجّل.',
   'This email already has an account. Choose Log in.':
@@ -502,8 +495,7 @@ const arabicStrings = <String, String>{
   'Resend SMS': 'إعادة إرسال الكود',
   'Change number': 'تغيير الرقم',
   'Continue with email only': 'المتابعة بالإيميل فقط',
-  'Your email is verified. Add a mobile number to the same account by confirming the code sent by SMS. This step is optional.':
-      'إيميلك اتأكد. ممكن تضيف رقم الموبايل لنفس الحساب باستخدام كود الرسالة. الخطوة دي اختيارية.',
+  'Your email is verified. Add a mobile number to the same account by confirming the code sent by SMS. This step is optional.': 'إيميلك اتأكد. ممكن تضيف رقم الموبايل لنفس الحساب باستخدام كود الرسالة. الخطوة دي اختيارية.',
   'Incorrect SMS code. Please try again.': 'كود الرسالة غير صحيح. حاول تاني.',
   'This SMS code expired. Request a new code.':
       'كود الرسالة انتهى. اطلب كودًا جديدًا.',
@@ -514,14 +506,12 @@ const arabicStrings = <String, String>{
       'الحساب ده مرتبط برقم موبايل بالفعل.',
   'Phone security check failed. Retry reCAPTCHA and check the authorized website domain.':
       'تعذّر التحقق الأمني للموبايل. أعد المحاولة وراجع إعدادات الموقع.',
-  'Real SMS requires Firebase Blaze billing. Continue with email, or use a Firebase Console test number.':
-      'إرسال الرسائل الفعلية محتاج تفعيل الفوترة. كمّل بالإيميل أو استخدم رقم اختبار.',
+  'Real SMS requires Firebase Blaze billing. Continue with email, or use a Firebase Console test number.': 'إرسال الرسائل الفعلية محتاج تفعيل الفوترة. كمّل بالإيميل أو استخدم رقم اختبار.',
   'SMS is not enabled for this country. Check Firebase SMS region settings.':
       'الرسائل غير مفعّلة للدولة دي. راجع إعدادات مناطق الإرسال.',
   'Enable Phone in Firebase Authentication, then retry. You can continue with email only.':
       'فعّل التحقق بالموبايل وحاول تاني. ممكن تكمّل بالإيميل فقط.',
-  'By sending a code, you agree that Google may store and use your number for spam and abuse prevention. Firebase SMS limits and charges apply.':
-      'بإرسال الكود، بتوافق إن Google قد تخزّن وتستخدم رقمك لمنع الرسائل المزعجة وإساءة الاستخدام. حدود وتكلفة رسائل Firebase مطبّقة.',
+  'By sending a code, you agree that Google may store and use your number for spam and abuse prevention. Firebase SMS limits and charges apply.': 'بإرسال الكود، بتوافق إن Google قد تخزّن وتستخدم رقمك لمنع الرسائل المزعجة وإساءة الاستخدام. حدود وتكلفة رسائل Firebase مطبّقة.',
   'Services': 'الخدمات',
   'I want to hire a...': 'بتدور على خدمة إيه؟',
   'More': 'المزيد',
@@ -577,8 +567,7 @@ const arabicStrings = <String, String>{
   'Continue your paid booking or start a new order.':
       'كمّل طلبك المدفوع أو ابدأ طلبًا جديدًا.',
   'Complete booking payment first.': 'كمّل دفع الطلب الأول.',
-  'Payment reserved. Continue to select a worker. Start a new order to discard this draft and release its payment.':
-      'تم حجز قيمة الطلب. كمّل لاختيار مقدم الخدمة، أو ابدأ طلبًا جديدًا لاسترجاع القيمة المحجوزة.',
+  'Payment reserved. Continue to select a worker. Start a new order to discard this draft and release its payment.': 'تم حجز قيمة الطلب. كمّل لاختيار مقدم الخدمة، أو ابدأ طلبًا جديدًا لاسترجاع القيمة المحجوزة.',
   'Real wallet booking payments are not available yet.':
       'الدفع الفعلي من المحفظة غير متاح حاليًا.',
   'Find your location': 'تحديد مكانك',
@@ -611,8 +600,7 @@ const arabicStrings = <String, String>{
   'Open location settings': 'فتح إعدادات الموقع',
   'Area search selects an approximate area. Add your street, building and apartment in the booking details.':
       'البحث بيحدد منطقة تقريبية. أضف الشارع والعمارة والشقة في تفاصيل الطلب.',
-  'Search runs when you press Search. Place data: © OpenStreetMap contributors, via Photon.':
-      'اضغط بحث للبحث عن المنطقة. بيانات الأماكن: © مساهمو OpenStreetMap، عبر Photon.',
+  'Search runs when you press Search. Place data: © OpenStreetMap contributors, via Photon.': 'اضغط بحث للبحث عن المنطقة. بيانات الأماكن: © مساهمو OpenStreetMap، عبر Photon.',
   'Amount': 'المبلغ',
   'minimum 10 pounds': 'الحد الأدنى ١٠ جنيهات',
   'Payment method': 'طريقة الدفع',
@@ -654,12 +642,9 @@ const arabicStrings = <String, String>{
   'Copy checkout link': 'نسخ رابط الدفع',
   'Check payment status': 'التحقق من الدفع',
   'Continue to secure payment': 'المتابعة للدفع الآمن',
-  'Complete payment in the secure checkout. Your balance updates after payment is confirmed. Fawry reference creation alone does not add funds.':
-      'كمّل الدفع في صفحة الدفع الآمنة. الرصيد بيتحدّث بعد تأكيد الدفع. إنشاء مرجع فوري وحده لا يضيف رصيدًا.',
-  'Checkout creation is uncertain. Do not start another deposit. Keep this reference for support and check payment status.':
-      'حالة إنشاء الدفع غير مؤكدة. احتفظ بالمرجع وتحقق من الحالة قبل بدء إيداع آخر.',
-  'The payment provider did not confirm checkout creation. Your balance has not changed. Keep this reference and contact support before starting another deposit.':
-      'مقدم الدفع لم يؤكد إنشاء العملية. رصيدك لم يتغيّر. احتفظ بالمرجع وتواصل مع الدعم قبل إيداع جديد.',
+  'Complete payment in the secure checkout. Your balance updates after payment is confirmed. Fawry reference creation alone does not add funds.': 'كمّل الدفع في صفحة الدفع الآمنة. الرصيد بيتحدّث بعد تأكيد الدفع. إنشاء مرجع فوري وحده لا يضيف رصيدًا.',
+  'Checkout creation is uncertain. Do not start another deposit. Keep this reference for support and check payment status.': 'حالة إنشاء الدفع غير مؤكدة. احتفظ بالمرجع وتحقق من الحالة قبل بدء إيداع آخر.',
+  'The payment provider did not confirm checkout creation. Your balance has not changed. Keep this reference and contact support before starting another deposit.': 'مقدم الدفع لم يؤكد إنشاء العملية. رصيدك لم يتغيّر. احتفظ بالمرجع وتواصل مع الدعم قبل إيداع جديد.',
   'Name': 'الاسم',
   'Enter your name': 'اكتب اسمك',
   'Gender': 'النوع',
@@ -713,8 +698,7 @@ const arabicStrings = <String, String>{
       'إعدادات الاتصال مرفوضة. راجع إعدادات التطبيق.',
   'Account creation is disabled in Firebase. Check Email/Password and the user signup settings.':
       'إنشاء الحسابات غير مفعّل. راجع إعدادات التسجيل.',
-  'Your email is verified, but the profile is blocked. Publish the project Firestore rules, then try again.':
-      'الإيميل مؤكد، لكن بيانات الحساب غير متاحة. راجع صلاحيات قاعدة البيانات وحاول تاني.',
+  'Your email is verified, but the profile is blocked. Publish the project Firestore rules, then try again.': 'الإيميل مؤكد، لكن بيانات الحساب غير متاحة. راجع صلاحيات قاعدة البيانات وحاول تاني.',
   'Create the default Firestore database in Firebase, then try again.':
       'قاعدة بيانات الحسابات لم يتم إعدادها. أكمل الإعداد وحاول تاني.',
   'The account database is unavailable. Check your connection and retry.':
@@ -726,15 +710,12 @@ const englishIntroStrings = <String, String>{
   'سند | SANAD': 'SANAD | سند',
   'سند — SANAD': 'SANAD',
   'كل خدمات بيتك،\nفي مكان واحد': 'All your home services.\nOne place.',
-  'كهربائي، سبّاك، نجّار وخدمات تانية. اختار الخدمة اللي محتاجها وابدأ طلبك بسهولة.':
-      'Electricians, plumbers, carpenters and more. Choose the service you need and start your request.',
+  'كهربائي، سبّاك، نجّار وخدمات تانية. اختار الخدمة اللي محتاجها وابدأ طلبك بسهولة.': 'Electricians, plumbers, carpenters and more. Choose the service you need and start your request.',
   'حدّد مكانك،\nوسيب الباقي علينا':
       'Set your location.\nWe will take it from there.',
-  'استخدم Locate me أو ابحث عن منطقتك، وبعدها ضيف عنوانك وتفاصيل الشغل.':
-      'Use Locate me or search for your area, then add your address and work details.',
+  'استخدم Locate me أو ابحث عن منطقتك، وبعدها ضيف عنوانك وتفاصيل الشغل.': 'Use Locate me or search for your area, then add your address and work details.',
   'احجز خدمتك،\nوتابع طلبك': 'Book your service.\nFollow your request.',
-  'سجّل حسابك، أكّد إيميلك، واختار الخدمة المناسبة. تفاصيل طلبك تفضل معاك خطوة بخطوة.':
-      'Create your account, verify your email and choose a service. Keep your request details with you, step by step.',
+  'سجّل حسابك، أكّد إيميلك، واختار الخدمة المناسبة. تفاصيل طلبك تفضل معاك خطوة بخطوة.': 'Create your account, verify your email and choose a service. Keep your request details with you, step by step.',
   'تخطي': 'Skip',
   'التالي': 'Next',
   'يلا نبدأ': 'Let’s get started',

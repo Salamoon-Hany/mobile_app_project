@@ -119,7 +119,7 @@ void main() {
       expect(t.takeException(), isNull);
       await t.tap(find.text('محفظة المنصة').first);
       await t.pumpAndSettle();
-      expect(find.text('رصيد المنصة التجريبي'), findsWidgets);
+      expect(find.text('رصيد المنصة المسجل'), findsWidgets);
       expect(t.takeException(), isNull);
     },
   );
