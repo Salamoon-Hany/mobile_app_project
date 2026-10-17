@@ -67,13 +67,13 @@ test('live payout cannot be marked paid without a real payment integration',asyn
 });
 test('admin access requires the configured verified email and ignores forged role fields',async()=>{
  const {repo,sql}=await fixture();try{
-  const handler=createMarketplaceHandler({repository:repo,apiKey:'test-key',adminEmails:['sandny.info@gmail.com'],fetchImpl:async(url,opts)=>{
+  const handler=createMarketplaceHandler({repository:repo,apiKey:'test-key',adminEmails:['sanad.infoo@gmail.com'],fetchImpl:async(url,opts)=>{
    const token=JSON.parse(opts.body).idToken;
-   return Response.json({users:[{localId:'c',email:token==='admin-token'?'Sandny.info@gmail.com':'customer@example.test',emailVerified:token!=='unverified-token',createdAt:String(Date.now())}]});
+   return Response.json({users:[{localId:'c',email:token==='admin-token'?'Sanad.infoo@gmail.com':'customer@example.test',emailVerified:token!=='unverified-token',createdAt:String(Date.now())}]});
   }});
   const req=(token,body)=>new Request('https://sanad.test/api/marketplace/admin'+(body?'/decision':''),{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
   assert.equal((await handler(req('customer-token'))).status,403);
-  assert.equal((await handler(req('customer-token',{email:'sandny.info@gmail.com',isAdmin:true,kind:'withdrawal',...paid('c','payout_new_001')}))).status,403);
+  assert.equal((await handler(req('customer-token',{email:'sanad.infoo@gmail.com',isAdmin:true,kind:'withdrawal',...paid('c','payout_new_001')}))).status,403);
   assert.equal((await handler(req('unverified-token'))).status,401);
   const admin=await handler(req('admin-token'));assert.equal(admin.status,200);assert.equal((await admin.json()).summary.accounts,3);
  }finally{sql.close();}
@@ -126,8 +126,8 @@ test('new administrator sees global lifecycle and payment history while deleted 
 
 test('administrator is an independent identity with no marketplace account and no customer operations',async()=>{
  const {repo,sql}=setup();try{
-  let email='Sandny.info@gmail.com',verified=true;
-  const handler=createMarketplaceHandler({repository:repo,apiKey:'test-key',adminEmails:['sandny.info@gmail.com'],fetchImpl:async()=>Response.json({users:[{localId:'standalone_admin',email,emailVerified:verified,createdAt:String(Date.now())}]})});
+  let email='Sanad.infoo@gmail.com',verified=true;
+  const handler=createMarketplaceHandler({repository:repo,apiKey:'test-key',adminEmails:['sanad.infoo@gmail.com'],fetchImpl:async()=>Response.json({users:[{localId:'standalone_admin',email,emailVerified:verified,createdAt:String(Date.now())}]})});
   const req=(path,body)=>new Request('https://sanad.test/api/marketplace/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer admin-session','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
   const session=await handler(req('session'));
   assert.equal(session.status,200);assert.equal(session.headers.get('Cache-Control'),'no-store');

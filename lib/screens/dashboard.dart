@@ -679,7 +679,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(height: 12),
                       AppText(
-                        '+20 123 456 7890',
+                        '01095069208',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -698,7 +698,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const SizedBox(height: 12),
                       AppText(
-                        'Sandny.info@gmail.com',
+                        'Sanad.infoo@gmail.com',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodyMedium?.color,

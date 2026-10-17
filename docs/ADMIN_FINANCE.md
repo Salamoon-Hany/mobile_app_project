@@ -1,6 +1,6 @@
 # SANAD administration and platform fees
 
-The support address is Sandny.info@gmail.com. Production administrator identities
+The support email is Sanad.infoo@gmail.com and the contact phone is 01095069208. Production administrator identities
 are configured through the hosted ADMIN_EMAILS variable, never through a client
 role or an email entered in a request. The owner must register this email in
 SANAD and verify it using Firebase email verification.
